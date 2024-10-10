@@ -1,6 +1,9 @@
 import pandas as pd
 import uproot
+from ROOT import TH1F, TH2F
 
+from torchic.core.histogram import AxisSpec, build_hist
+from torchic.utils.overload import overload, signature
 from torchic.utils.terminal_colors import TerminalColors as tc
 
 class SubsetDict:
@@ -21,7 +24,6 @@ class SubsetDict:
     def __getitem__(self, key):
         return self._subsets[key]()
 
-
 class Dataset:
 
     def __init__(self, data, **kwargs):
@@ -39,6 +41,9 @@ class Dataset:
         self._data = None
         self._open(data, **kwargs)
         self._subsets = SubsetDict()
+
+    def __getitem__(self, key):
+        return Dataset(self._subsets[key])
 
     def _open(self, data, **kwargs):
         
@@ -101,3 +106,60 @@ class Dataset:
     
     def add_subset(self, name, condition):
         self._subsets.add_subset(name, lambda: self._data[condition])
+
+    def query(self, expr: str, *, inplace: bool = True, **kwargs) -> pd.DataFrame | None:
+        '''
+            Query the dataset using a string expression.
+            
+            Args:
+                expr (str): The query expression.
+                inplace (bool): Whether to modify the dataset in place.
+                **kwargs: Additional keyword arguments to be passed to the pandas query function.
+        '''
+        
+        if inplace:
+            self._data.query(expr, inplace=True, **kwargs)
+        else:
+            return self._data.query(expr, inplace=False, **kwargs)
+
+    @overload
+    @signature('str', 'AxisSpec')  
+    def build_hist(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
+        '''
+            Build a histogram with one axis
+
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_hist(self._subsets[subset][column], axis_spec_x)
+        else:
+            return build_hist(self._data[column], axis_spec_x)
+    
+    @build_hist.overload
+    @signature('str', 'str', 'AxisSpec', 'AxisSpec')
+    def build_hist(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
+        '''
+            Build a histogram with two axes
+
+            Args:
+                column_x (str): The column to be histogrammed on the x-axis
+                column_y (str): The column to be histogrammed on the y-axis
+                axis_spec_x (AxisSpec): The specification for the x-axis
+                axis_spec_y (AxisSpec): The specification for the y-axis
+
+            Returns:
+                TH2F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_hist(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+        else:
+            return build_hist(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+    
+    
