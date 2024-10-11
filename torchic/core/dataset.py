@@ -2,7 +2,7 @@ import pandas as pd
 import uproot
 from ROOT import TH1F, TH2F
 
-from torchic.core.histogram import AxisSpec, build_hist
+from torchic.core.histogram import AxisSpec, build_TH1, build_TH2
 from torchic.utils.overload import overload, signature
 from torchic.utils.terminal_colors import TerminalColors as tc
 
@@ -122,6 +122,17 @@ class Dataset:
         else:
             return self._data.query(expr, inplace=False, **kwargs)
 
+    def concat(self, other: 'Dataset', **kwargs) -> 'Dataset':
+        '''
+            Concatenate two datasets.
+
+            Args:
+                other (Dataset): The other dataset to concatenate.
+                **kwargs: Additional keyword arguments to be passed to the pandas concat function.
+        '''
+        
+        return Dataset(pd.concat([self._data, other.data], **kwargs))
+
     @overload
     @signature('str', 'AxisSpec')  
     def build_hist(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
@@ -137,9 +148,9 @@ class Dataset:
         '''
         subset = kwargs.get('subset', None)
         if subset:
-            return build_hist(self._subsets[subset][column], axis_spec_x)
+            return build_TH1(self._subsets[subset][column], axis_spec_x)
         else:
-            return build_hist(self._data[column], axis_spec_x)
+            return build_TH1(self._data[column], axis_spec_x)
     
     @build_hist.overload
     @signature('str', 'str', 'AxisSpec', 'AxisSpec')
@@ -158,8 +169,8 @@ class Dataset:
         '''
         subset = kwargs.get('subset', None)
         if subset:
-            return build_hist(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+            return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
         else:
-            return build_hist(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+            return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
     
     

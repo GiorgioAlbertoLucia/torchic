@@ -26,9 +26,7 @@ class HistLoadInfo:
     hist_file_path: str
     hist_name: str
 
-@overload
-@signature('Series', 'AxisSpec')
-def build_hist(data, axis_spec_x: AxisSpec) -> TH1F:
+def build_TH1(data, axis_spec_x: AxisSpec) -> TH1F:
     '''
         Build a histogram with one axis
 
@@ -45,14 +43,13 @@ def build_hist(data, axis_spec_x: AxisSpec) -> TH1F:
         hist.Fill(x)
     return hist
 
-@build_hist.overload
-@signature('Series', 'Series', 'AxisSpec', 'AxisSpec')
-def build_hist(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> TH2F:
+def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> TH2F:
     '''
         Build a histogram with two axes
 
         Args:
-            data (List[pd.Series]): The data to be histogrammed [x, y]
+            data_x (pd.Series): The data to be histogrammed on the x-axis
+            data_y (pd.Series): The data to be histogrammed on the y-axis
             axis_spec_x (AxisSpec): The specification for the x-axis
             axis_spec_y (AxisSpec): The specification for the y-axis
 
@@ -65,9 +62,7 @@ def build_hist(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> 
         hist.Fill(x, y)
     return hist
 
-@overload
-@signature('Series', 'TH1F')
-def fill_hist(data, hist: TH1F):
+def fill_TH1(data, hist: TH1F):
     '''
         Fill a histogram with data
 
@@ -78,9 +73,7 @@ def fill_hist(data, hist: TH1F):
     for x in data:
         hist.Fill(x)
     
-@fill_hist.overload
-@signature('Series', 'Series', 'TH2F')
-def fill_hist(data_x, data_y, hist: TH2F):
+def fill_TH2(data_x, data_y, hist: TH2F):
     '''
         Fill a 2D histogram with data
 

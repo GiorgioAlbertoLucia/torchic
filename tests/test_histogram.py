@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from torchic.core.histogram import AxisSpec, build_hist, fill_hist
+from torchic.core.histogram import AxisSpec, build_TH1, build_TH2, fill_TH1, fill_TH2
 from ROOT import TH1F, TH2F
 
 class TestBuildHist(unittest.TestCase):
@@ -12,7 +12,7 @@ class TestBuildHist(unittest.TestCase):
         self.axis_spec_y = AxisSpec(1, 5, 5, 'column_y', ';column_y;')
 
     def test_build_hist(self):
-        hist = build_hist(self.data, self.axis_spec_x)
+        hist = build_TH1(self.data, self.axis_spec_x)
         self.assertIsInstance(hist, TH1F)
         self.assertEqual(hist.GetEntries(), 5)
         self.assertEqual(hist.GetNbinsX(), self.axis_spec_x.nbins)
@@ -20,7 +20,7 @@ class TestBuildHist(unittest.TestCase):
         self.assertEqual(hist.GetXaxis().GetXmax(), self.axis_spec_x.xmax)
 
     def test_build_hist_2d(self):
-        hist = build_hist(self.data_2d['column_x'], self.data_2d['column_y'], self.axis_spec_x, self.axis_spec_y)
+        hist = build_TH2(self.data_2d['column_x'], self.data_2d['column_y'], self.axis_spec_x, self.axis_spec_y)
         self.assertIsInstance(hist, TH2F)
         self.assertEqual(hist.GetEntries(), 5)
         self.assertEqual(hist.GetNbinsX(), self.axis_spec_x.nbins)
@@ -32,12 +32,12 @@ class TestBuildHist(unittest.TestCase):
 
     def test_fill_hist(self):
         hist = TH1F('hist', 'hist', 5, 1, 5)
-        fill_hist(self.data, hist)
+        fill_TH1(self.data, hist)
         self.assertEqual(hist.GetEntries(), 5)
 
     def test_fill_hist_2d(self):
         hist = TH2F('hist', 'hist', 5, 1, 5, 5, 1, 5)
-        fill_hist(self.data_2d['column_x'], self.data_2d['column_y'], hist)
+        fill_TH2(self.data_2d['column_x'], self.data_2d['column_y'], hist)
         self.assertEqual(hist.GetEntries(), 5)
 
 if __name__ == '__main__':
