@@ -14,6 +14,7 @@ class SubsetDict:
     def __init__(self):
 
         self._subsets = {}
+        self.add_subset('full', lambda: slice(None))
 
     def add_subset(self, name, condition):
 
@@ -42,8 +43,16 @@ class Dataset:
         self._open(data, **kwargs)
         self._subsets = SubsetDict()
 
+    #def __getitem__(self, key):
+    #    return Dataset(self._subsets[key])
+        
+    # ADJUST TO HANDLE SUBSETS AS WELL
+        
     def __getitem__(self, key):
-        return Dataset(self._subsets[key])
+        return self._data[key]
+    
+    def __setitem__(self, key, value):
+        self._data[key] = value
 
     def _open(self, data, **kwargs):
         
@@ -70,6 +79,7 @@ class Dataset:
     def _open_root(self, file, **kwargs) -> pd.DataFrame:
         
         tree_name = kwargs.get('tree_name', None)
+        uproot_kwargs = {key: value for key, value in kwargs.items() if key not in ['tree_name', 'columns', 'folder_name']}
         if tree_name is None:  
             print(tc.RED+'[ERROR]: '+tc.RESET+'tree_name must be specified when using a .root file.')
             return
@@ -77,11 +87,11 @@ class Dataset:
         columns = kwargs.get('columns', None)
         folder_name = kwargs.get('folder_name', None)
         if folder_name is None:
-            return uproot.open(f'{file}:{tree_name}').arrays(filter_name=columns, library='pd', **kwargs)
+            return uproot.open(f'{file}:{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
 
         if folder_name[-1] != '*':
             print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{folder_name}/{tree_name}'+tc.RESET)
-            return uproot.open(f'{file}:{folder_name}/{tree_name}').arrays(filter_name=columns, library='pd', **kwargs)
+            return uproot.open(f'{file}:{folder_name}/{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
 
         file_folders = uproot.open(file).keys()
         tree_path_list = []
@@ -92,8 +102,7 @@ class Dataset:
         tmp_data = pd.DataFrame()
         for tree_path in tree_path_list:
             print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_path}'+tc.RESET)
-            print(f"Reading {file}:{tree_path}")
-            tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **kwargs)], ignore_index=True, copy=False)
+            tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
         return tmp_data
     
     @property
@@ -132,6 +141,48 @@ class Dataset:
         '''
         
         return Dataset(pd.concat([self._data, other.data], **kwargs))
+
+    def describe(self, **kwargs) -> pd.DataFrame:
+        '''
+            Generate descriptive statistics of the dataset.
+
+            Args:
+                **kwargs: Additional keyword arguments to be passed to the pandas describe function.
+        '''
+        
+        return self._data.describe(**kwargs)
+    
+    def eval(self, expr: str, **kwargs) -> pd.DataFrame:
+        '''
+            Evaluate an expression in the dataset.
+
+            Args:
+                expr (str): The expression to evaluate.
+                **kwargs: Additional keyword arguments to be passed to the pandas eval function.
+        '''
+        
+        return self._data.eval(expr, **kwargs)
+    
+    def apply(self, func, **kwargs) -> pd.DataFrame:
+        '''
+            Apply a function to the dataset.
+
+            Args:
+                func (function): The function to apply.
+                **kwargs: Additional keyword arguments to be passed to the pandas apply function.
+        '''
+        
+        return self._data.apply(func, **kwargs)
+    
+    def head(self, n: int = 5) -> pd.DataFrame:
+        '''
+            Return the first n rows of the dataset.
+
+            Args:
+                n (int): The number of rows to return.
+        '''
+        
+        return self._data.head(n)
 
     @overload
     @signature('str', 'AxisSpec')  

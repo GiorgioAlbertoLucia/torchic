@@ -57,7 +57,7 @@ def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> T
             TH1F: The histogram
     '''
 
-    hist = TH2F(axis_spec_x.name, axis_spec_x.title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
+    hist = TH2F(axis_spec_y.name, axis_spec_y.title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
     for x, y in zip(data_x, data_y):
         hist.Fill(x, y)
     return hist
