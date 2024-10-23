@@ -49,6 +49,10 @@ class Dataset:
     # ADJUST TO HANDLE SUBSETS AS WELL
         
     def __getitem__(self, key):
+        if ':' in key:
+            key1, key2 = key.split(':')
+            subset = self._subsets[key1]
+            return subset[key2] if key2 else subset
         return self._data[key]
     
     def __setitem__(self, key, value):
@@ -129,7 +133,8 @@ class Dataset:
         if inplace:
             self._data.query(expr, inplace=True, **kwargs)
         else:
-            return self._data.query(expr, inplace=False, **kwargs)
+            tmp_data = self._data.query(expr, inplace=False, **kwargs)
+            return Dataset(tmp_data)
 
     def concat(self, other: 'Dataset', **kwargs) -> 'Dataset':
         '''
