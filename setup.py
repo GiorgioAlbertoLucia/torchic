@@ -18,10 +18,11 @@ setup(
     python_requires='>=3.6',  # Minimum Python version
     install_requires=[
         # List your package dependencies here
-        'numpy',
+        'numpy<2.0',
         'pandas',
+        'scikit-learn',
+        'pyYAML',
         'uproot',
-        'sklearn'
     ],
     extras_require={
         'ROOT': ['ROOT'],
