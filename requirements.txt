@@ -1,0 +1,4 @@
+numpy
+pandas==2.1.4
+PyYAML==6.0.1
+uproot==5.2.0
