@@ -103,3 +103,43 @@ def load_hist(hist_load_info: HistLoadInfo):
     hist.SetDirectory(0)
     hist_file.Close()
     return hist
+
+def getEfficiency(histTot, histSel, name:str, xtitle="p_{T} (GeV/c)", ytitle="Efficiency"):
+    '''
+        Compute the efficiency of a selection
+
+        Args:
+            histTot, histSel (TH1F): The total and selected histograms
+            name (str): The name of the efficiency plot
+            xtitle (str): The x-axis title
+            ytitle (str): The y-axis title
+
+        Returns:
+            TH1F: The efficiency histogram
+    '''
+    hEff = TH1F(name, f'{name}; f{xtitle} ; f{ytitle}', histTot.GetNbinsX(), histTot.GetXaxis().GetXmin(), histTot.GetXaxis().GetXmax())
+    for xbin in range(1, histTot.GetNbinsX()+1):
+            if histTot.GetBinContent(xbin) > 0:
+                eff = histSel.GetBinContent(xbin)/histTot.GetBinContent(xbin)
+                if(eff<=1):
+                    effErr = np.sqrt(eff*(1-eff)/histTot.GetBinContent(xbin))
+                    hEff.SetBinError(xbin, effErr)
+                else:
+                    hEff.SetBinError(xbin, 0)
+                hEff.SetBinContent(xbin, eff)
+    return hEff
+
+def getNormalizeHist(hist):
+    '''
+        Return normalized histogram
+
+        Args:
+            hist (TH1F): The histogram to normalize
+
+        Returns:
+            TH1F: The efficiency histogram
+    '''
+    integral=hist.Integral()
+    if integral>0:
+        hist.Scale(1./integral)
+    return hist
