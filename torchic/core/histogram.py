@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from ROOT import TH1F, TH2F, TFile
 from torchic.utils.overload import overload, signature
 
+import numpy as np
 import pandas as pd
 
 @dataclass
@@ -104,12 +105,12 @@ def load_hist(hist_load_info: HistLoadInfo):
     hist_file.Close()
     return hist
 
-def getEfficiency(histTot, histSel, name:str, xtitle="p_{T} (GeV/c)", ytitle="Efficiency"):
+def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: str = None, ytitle: str = "Efficiency") -> TH1F:
     '''
         Compute the efficiency of a selection
 
         Args:
-            histTot, histSel (TH1F): The total and selected histograms
+            hist_tot, hist_sel (TH1F): The total and selected histograms (denominator, numerator)
             name (str): The name of the efficiency plot
             xtitle (str): The x-axis title
             ytitle (str): The y-axis title
@@ -117,19 +118,23 @@ def getEfficiency(histTot, histSel, name:str, xtitle="p_{T} (GeV/c)", ytitle="Ef
         Returns:
             TH1F: The efficiency histogram
     '''
-    hEff = TH1F(name, f'{name}; f{xtitle} ; f{ytitle}', histTot.GetNbinsX(), histTot.GetXaxis().GetXmin(), histTot.GetXaxis().GetXmax())
-    for xbin in range(1, histTot.GetNbinsX()+1):
-            if histTot.GetBinContent(xbin) > 0:
-                eff = histSel.GetBinContent(xbin)/histTot.GetBinContent(xbin)
-                if(eff<=1):
-                    effErr = np.sqrt(eff*(1-eff)/histTot.GetBinContent(xbin))
-                    hEff.SetBinError(xbin, effErr)
+    if name is None:
+        name = hist_sel.GetName() + "_eff"
+    if xtitle is None:
+        xtitle = hist_sel.GetXaxis().GetTitle()
+    hist_eff = TH1F(name, f'{name}; f{xtitle} ; f{ytitle}', hist_tot.GetNbinsX(), hist_tot.GetXaxis().GetXmin(), hist_tot.GetXaxis().GetXmax())
+    for xbin in range(1, hist_tot.GetNbinsX()+1):
+            if hist_tot.GetBinContent(xbin) > 0:
+                eff = hist_sel.GetBinContent(xbin)/hist_tot.GetBinContent(xbin)
+                if eff <= 1:
+                    eff_err = np.sqrt(eff * (1 - eff) / hist_tot.GetBinContent(xbin))
+                    hist_eff.SetBinError(xbin, eff_err)
                 else:
-                    hEff.SetBinError(xbin, 0)
-                hEff.SetBinContent(xbin, eff)
-    return hEff
+                    hist_eff.SetBinError(xbin, 0)
+                hist_eff.SetBinContent(xbin, eff)
+    return hist_eff
 
-def getNormalizeHist(hist):
+def normalize_hist(hist: TH1F, low_edge: float = None, high_edge: float = None, option: str = '') -> None:
     '''
         Return normalized histogram
 
@@ -139,7 +144,9 @@ def getNormalizeHist(hist):
         Returns:
             TH1F: The efficiency histogram
     '''
-    integral=hist.Integral()
-    if integral>0:
-        hist.Scale(1./integral)
-    return hist
+    if low_edge is None or high_edge is None:
+        low_edge = hist.GetXaxis().GetXmin()
+        high_edge = hist.GetXaxis().GetXmax()
+    integral = hist.Integral(hist.FindBin(low_edge), hist.FindBin(high_edge), option)
+    if integral > 0:
+        hist.Scale(1./integral, option)

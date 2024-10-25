@@ -133,7 +133,7 @@ class Dataset:
         if inplace:
             self._data.query(expr, inplace=True, **kwargs)
         else:
-            tmp_data = self._data.query(expr, inplace=False, **kwargs)
+            tmp_data = self._data.query(expr, inplace=False, **kwargs).copy()
             return Dataset(tmp_data)
 
     def concat(self, other: 'Dataset', **kwargs) -> 'Dataset':
