@@ -131,7 +131,7 @@ def getEfficiency(histTot, histSel, name:str, xtitle="p_{T} (GeV/c)", ytitle="Ef
 
 def getNormalizeHist(hist):
     '''
-        CReturn normalized histogram
+        Return normalized histogram
 
         Args:
             hist (TH1F): The histogram to normalize
