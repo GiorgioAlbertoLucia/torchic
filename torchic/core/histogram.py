@@ -105,7 +105,7 @@ def load_hist(hist_load_info: HistLoadInfo):
     hist_file.Close()
     return hist
 
-def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: str = None, ytitle: str = "Efficiency") -> TH1F:
+def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: str = None, ytitle: str = 'Efficiency') -> TH1F:
     '''
         Compute the efficiency of a selection
 
@@ -151,7 +151,7 @@ def normalize_hist(hist: TH1F, low_edge: float = None, high_edge: float = None, 
     if integral > 0:
         hist.Scale(1./integral, option)
         
-def project_hist(hist2D, name, min_int, max_int,variableToProject="Y"):
+def project_hist(hist2D: TH2F, min_int: float, max_int: float, name: str = None, var_to_project: str = 'Y') -> TH1F:
     '''
         Return the y or x projection of a 2D histogram
         
@@ -160,29 +160,34 @@ def project_hist(hist2D, name, min_int, max_int,variableToProject="Y"):
             name (str): The name of the projection
             min_int (float): The minimum value of the projection
             max_int (float): The maximum value of the projection
-            variableToProject (str): The variable to project
+            var_to_project (str): The variable to project
             
         Returns:
             TH1F: The projected histogram
     '''
-    
-    if variableToProject=="Y":
-        hist = hist2D.ProjectionY(name, hist2D.GetXaxis().FindBin(min_int), hist2D.GetXaxis().FindBin(max_int),"e")
+    if name is None:
+        name = hist2D.GetName() + f'_proj_{var_to_project}'
+    if var_to_project == 'Y':
+        hist = hist2D.ProjectionY(name, hist2D.GetXaxis().FindBin(min_int), hist2D.GetXaxis().FindBin(max_int), 'e')
+    elif var_to_project == 'X':
+        hist = hist2D.ProjectionX(name, hist2D.GetYaxis().FindBin(min_int), hist2D.GetYaxis().FindBin(max_int), 'e')
     else:
-        hist = hist2D.ProjectionX(name, hist2D.GetYaxis().FindBin(min_int), hist2D.GetYaxis().FindBin(max_int),"e")
+        raise ValueError('var_to_project must be either X or Y')
     return hist
     
-def scale_hist_axis(oldHist,title,nbins,xmin,xmax,scaleFactor,xtitle,ytitle="Counts (a.u.)"):
+def scale_hist_axis(old_hist: TH1F, scale_factor: float, **kwargs) -> TH1F | None:
     '''
         Return a histogram with scaled axis
         
         Args:
-            oldHist (TH1F): The histogram to scale
+            old_hist (TH1F): The histogram to scale
+            scale_factor (float): The factor by which the axis is divided
+        Kwargs:
+            xmin, xmax (float): The low and high edges in which the histogram is scaled
+            inplace (bool): If True, the scaling is done in place
+            name (str): The name of the new histogram
             title (str): The title of the new histogram
-            nbins (int): The number of bins
-            xmin (float): The minimum value
-            xmax (float): The maximum value
-            scaleFactor (float): The scale factor
+            nbins (int): The number of bins of the new histogram
             xtitle (str): The x-axis title
             ytitle (str): The y-axis title
             
@@ -190,11 +195,22 @@ def scale_hist_axis(oldHist,title,nbins,xmin,xmax,scaleFactor,xtitle,ytitle="Cou
             TH1F: The scaled histogram
     '''
     
-    newHist=TH1F(f"{title}_new",f"{title}_new",nbins,xmin,xmax)
-    newHist.SetXTitle(xtitle)
-    newHist.SetYTitle(ytitle)
-    for j in range(oldHist.FindBin(xmin),oldHist.FindBin(xmax)):
-        binCenternewHist=(oldHist.GetXaxis().GetBinCenter(j))/scaleFactor
-        binContent=oldHist.GetBinContent(j)
-        newHist.Fill(binCenternewHist,binContent)
-    return newHist
+    nbins = kwargs.get('nbins', old_hist.GetNbinsX())
+    xmin = kwargs.get('xmin', old_hist.GetXaxis().GetXmin())
+    xmax = kwargs.get('xmax', old_hist.GetXaxis().GetXmax())
+    new_hist = TH1F(kwargs.get('name', f'{old_hist.GetName()}_scaled'), kwargs.get('title', old_hist.GetTitle()), nbins, xmin, xmax)
+    if 'xtitle' in kwargs:
+        new_hist.GetXaxis().SetTitle(kwargs.get('xtitle'))
+    new_hist.GetYaxis().SetTitle(kwargs.get('ytitle', 'Counts (a.u.)'))
+
+    for ibin in range(old_hist.FindBin(xmin),old_hist.FindBin(xmax)):
+        bin_center = (old_hist.GetXaxis().GetBinCenter(ibin)) / scale_factor
+        bin_content = old_hist.GetBinContent(ibin)
+        new_hist.Fill(bin_center, bin_content)
+    
+    if kwargs.get('inplace', False):
+        old_hist.Clone(new_hist)
+        del new_hist
+        old_hist.SetName(kwargs.get('name', f'{old_hist.GetName()}_scaled'))
+    else:
+        return new_hist
