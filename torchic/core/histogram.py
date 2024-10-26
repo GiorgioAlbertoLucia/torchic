@@ -150,3 +150,51 @@ def normalize_hist(hist: TH1F, low_edge: float = None, high_edge: float = None, 
     integral = hist.Integral(hist.FindBin(low_edge), hist.FindBin(high_edge), option)
     if integral > 0:
         hist.Scale(1./integral, option)
+        
+def project_hist(hist2D, name, min_int, max_int,variableToProject="Y"):
+    '''
+        Return the y or x projection of a 2D histogram
+        
+        Args:
+            hist2D (TH2F): The 2D histogram to project
+            name (str): The name of the projection
+            min_int (float): The minimum value of the projection
+            max_int (float): The maximum value of the projection
+            variableToProject (str): The variable to project
+            
+        Returns:
+            TH1F: The projected histogram
+    '''
+    
+    if variableToProject=="Y":
+        hist = hist2D.ProjectionY(name, hist2D.GetXaxis().FindBin(min_int), hist2D.GetXaxis().FindBin(max_int),"e")
+    else:
+        hist = hist2D.ProjectionX(name, hist2D.GetYaxis().FindBin(min_int), hist2D.GetYaxis().FindBin(max_int),"e")
+    return hist
+    
+def scale_hist_axis(oldHist,title,nbins,xmin,xmax,scaleFactor,xtitle,ytitle="Counts (a.u.)"):
+    '''
+        Return a histogram with scaled axis
+        
+        Args:
+            oldHist (TH1F): The histogram to scale
+            title (str): The title of the new histogram
+            nbins (int): The number of bins
+            xmin (float): The minimum value
+            xmax (float): The maximum value
+            scaleFactor (float): The scale factor
+            xtitle (str): The x-axis title
+            ytitle (str): The y-axis title
+            
+        Returns:
+            TH1F: The scaled histogram
+    '''
+    
+    newHist=TH1F(f"{title}_new",f"{title}_new",nbins,xmin,xmax)
+    newHist.SetXTitle(xtitle)
+    newHist.SetYTitle(ytitle)
+    for j in range(oldHist.FindBin(xmin),oldHist.FindBin(xmax)):
+        binCenternewHist=(oldHist.GetXaxis().GetBinCenter(j))/scaleFactor
+        binContent=oldHist.GetBinContent(j)
+        newHist.Fill(binCenternewHist,binContent)
+    return newHist
