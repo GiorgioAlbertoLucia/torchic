@@ -15,6 +15,7 @@ setup(
         'License :: OSI Approved :: MIT License',  # Replace with your license
         'Operating System :: OS Independent',
     ],
+    package_data={'torchic': ['physics/BetheBloch.hh']},  # Include header files
     python_requires='>=3.6',  # Minimum Python version
     install_requires=[
         # List your package dependencies here

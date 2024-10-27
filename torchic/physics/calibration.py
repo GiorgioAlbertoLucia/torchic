@@ -25,8 +25,8 @@ def pyBetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
     bb = np.log(bb + kp3)
     return (kp2 - aa - bb) * kp1 / aa
 
-def pySimilBetheBloch(betagamma, kp1, kp2):
-    return kp1 / betagamma**2 + kp2
+def pySimilBetheBloch(betagamma, kp1, kp2, kp3):
+    return kp1 / betagamma**kp2 + kp3
 
 def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict:
     '''
@@ -140,11 +140,11 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dic
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
     
-    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[kp1]/x^2 + [kp2]', xmin, xmax)
-    simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_BETHEBLOCH_PARS))
-    simil_bethe_bloch_pars = {k: v for k, v in list(simil_bethe_bloch_pars.items())[:2]}
+    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[kp1]/x^[kp2] + [kp3]', xmin, xmax)
+    DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5}
+    simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_PARAMS))
     simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
-    #simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
+    simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
     graph_mean.Fit(simil_bethe_bloch_func, 'RMS+')
     
     resolution_fit = TF1('resolution_fit', '[0]', xmin, xmax)
