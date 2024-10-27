@@ -1,15 +1,18 @@
-from torchic.core.api import (
+from torchic.core.dataset import (
     Dataset,
+)
+
+from torchic.core import histogram
+from torchic.core.histogram import (
     AxisSpec,
-    HistLoadInfo,
-    histogram,
+    HistLoadInfo
+)
+
+from torchic.core.fitter import (
     Fitter,
     fit_TH1,
     fit_by_slices,
 )
-
-from torchic import physics
-from torchic import utils
 
 __all__ = [
     'Dataset',
@@ -19,6 +22,4 @@ __all__ = [
     'Fitter',
     'fit_TH1',
     'fit_by_slices',
-    'physics',
-    'utils',
 ]

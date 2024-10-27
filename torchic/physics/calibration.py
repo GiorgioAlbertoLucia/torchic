@@ -19,6 +19,9 @@ DEFAULT_BETHEBLOCH_PARS = { # params for TPC He3 pp
                             'kp5': 2.048336
                           }
 def pyBetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
+    '''
+        Python implementation of the Bethe-Bloch formula.
+    '''
     beta = betagamma / np.sqrt(1 + betagamma**2)
     aa = beta**kp4
     bb = (1/betagamma)**kp5
@@ -26,6 +29,9 @@ def pyBetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
     return (kp2 - aa - bb) * kp1 / aa
 
 def pySimilBetheBloch(betagamma, kp1, kp2, kp3):
+    '''
+        Python implementation of a simil Bethe-Bloch formula: kp1 / betagamma**kp2 + kp3
+    '''
     return kp1 / betagamma**kp2 + kp3
 
 def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict:
