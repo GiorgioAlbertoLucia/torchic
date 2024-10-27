@@ -206,7 +206,10 @@ def scale_hist_axis(old_hist: TH1F, scale_factor: float, **kwargs) -> TH1F | Non
     for ibin in range(old_hist.FindBin(xmin),old_hist.FindBin(xmax)):
         bin_center = (old_hist.GetXaxis().GetBinCenter(ibin)) / scale_factor
         bin_content = old_hist.GetBinContent(ibin)
+        bin_index=new_hist.FindBin(bin_center)
         new_hist.Fill(bin_center, bin_content)
+        new_hist.SetBinContent(bin_index, bin_content)
+        new_hist.SetBinError(bin_index, old_hist.GetBinError(ibin))
     
     if kwargs.get('inplace', False):
         old_hist.Clone(new_hist)
