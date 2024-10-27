@@ -35,6 +35,7 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
         The mean and sigma of the Gaussian are stored in a TGraphErrors.
         The bin error is calculated as the bin width.
         The mean error is calculated as mean * expected resolution.
+        The histogram, curve and TGraphErrors are stored in the output file.
 
         Parameters:
         - h2: TH2F
