@@ -6,6 +6,16 @@ from torchic.physics.ITS import average_cluster_size
 from torchic.core.dataset import Dataset
 from torchic.core.histogram import AxisSpec
 
+def getSign(flags):
+    if flags & 256:
+        return 1
+    else:
+        return -1
+
+
+# vectorised version of getSign
+getSign_vectorised = np.vectorize(getSign)
+
 def bethe_bloch_calibration_example():
     '''
         The following function performs a TPC calibration (of He3) with the Bethe-Bloch formula.
@@ -18,9 +28,12 @@ def bethe_bloch_calibration_example():
     folder_name = 'DF*'                     # name of the folder(s) containing the tree (O2Physics table)
     tree_name = 'O2nucleitable'             # name of the tree (O2Physics table) in the input file
 
-    dataset = Dataset(input_file, folder_name=folder_name, tree_name=tree_name, columns=['fPt', 'fTPCsignal', 'fTPCInnerParam', 'fDCAxy', 'fDCAz', 'fTPCnCls', 'fZvertex', 'fITSclusterSizes', 'fEta'])
-    
+    dataset = Dataset(input_file, folder_name=folder_name, tree_name=tree_name, columns=['fPt', 'fTPCsignal', 'fTPCInnerParam', 'fDCAxy', 'fDCAz', 'fTPCnCls', 'fZvertex', 'fITSclusterSizes', 'fEta', 'fFlags'])
+    dataset['fSign'] = getSign_vectorised(dataset['fFlags'])
+
     # selection cuts from llbariogl/NucleiFlow
+    dataset.query('abs(fEta) < 0.8', inplace=True)
+    dataset.query('fSign < 0', inplace=True)    
     dataset.query('abs(fDCAxy) < 0.1', inplace=True)
     dataset.query('abs(fDCAz) < 1.', inplace=True)
     dataset.query('fTPCnCls > 99', inplace=True)
@@ -79,7 +92,7 @@ def bethe_bloch_calibration_example():
     # energy loss calibration
     h2_dEdx = dataset.build_hist('fBetaGamma', 'fTPCsignal', axis_spec_bg, axis_spec_dEdx)
     
-    bb_options = {'first_bin_fit_by_slices': h2_dEdx.GetXaxis().FindBin(0.55),
+    bb_options = {'first_bin_fit_by_slices': h2_dEdx.GetXaxis().FindBin(0.35),
                'last_bin_fit_by_slices': h2_dEdx.GetXaxis().FindBin(4.)
     }
     bethe_bloch_pars = bethe_bloch_calibration(h2_dEdx, bethe_bloch_dir, **bb_options)

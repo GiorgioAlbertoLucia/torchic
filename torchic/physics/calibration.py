@@ -62,8 +62,12 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
     fit_results['mean_err'] = fit_results['mean'] * 0.09
+    fit_results['res'] = fit_results['sigma'] / fit_results['mean']
+    fit_results['res_err'] = np.sqrt((fit_results['sigma_err']/fit_results['mean'])**2 + (fit_results['sigma']*fit_results['mean_err']/fit_results['mean']**2)**2)
 
     graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['mean']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
+    graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res']), np.array(fit_results['bin_error']),  np.array(fit_results['res_err']))
+    
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
     bethe_bloch_func = TF1('bethe_bloch_func', BetheBloch, xmin, xmax, 5)
@@ -71,6 +75,10 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
     bethe_bloch_func.SetParNames(*bethe_bloch_pars.keys())
     bethe_bloch_func.SetParameters(*bethe_bloch_pars.values())
     graph_mean.Fit(bethe_bloch_func, 'RMS+')
+
+    const_fit = TF1('const_fit', '[0]', xmin, xmax)
+    const_fit.SetParameter(0, 0.09)
+    graph_res.Fit(const_fit, 'RMS+')
 
     print(tc.GREEN+'[INFO]:'+tc.RESET+'-------- BETHE BLOCH PARAMETRISATION --------')
     for ipar, par in bethe_bloch_pars.items():
@@ -85,6 +93,7 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
     
     output_file.cd()
     graph_mean.Write('g_FitBySlices')
+    graph_res.Write('g_ResBySlices')
     h2.Write('h2_dEdx')
     bethe_bloch_func.Write('f_BetheBlochCurve')
     canvas.Write('c_dEdxAndBetheBloch')
