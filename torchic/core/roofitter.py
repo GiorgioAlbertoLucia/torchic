@@ -26,7 +26,7 @@ class Roofitter:
 
         self._model = None
 
-    def build_pdf(self, pdf, args = None, return_function: bool = False):
+    def build_pdf(self, pdf, args = None, return_function: bool = False, **kwargs):
         '''
             Add a pdf to the list of pdfs to be combined
         '''
@@ -34,7 +34,9 @@ class Roofitter:
         if pdf ==  'gaus':
             returned_function = self._build_gaus(return_function=return_function)   
         elif pdf == 'exp':
-            returned_function = self._build_exp(return_function=return_function)
+            returned_function = self._build_exp(return_function=return_function, exp_offset=kwargs.get('exp_offset', False))
+        elif pdf == 'exp_offset':
+            returned_function = self._build_exp(return_function=return_function, exp_offset=True)
         else:
             raise ValueError(f'pdf {pdf} not recognized')
         
@@ -45,8 +47,8 @@ class Roofitter:
 
         if x is None:
             x = self._x
-        mean = RooRealVar('mean', 'mean', 0, -10000, 10000)
-        sigma = RooRealVar('sigma', 'sigma', 1, 0, 10000)
+        mean = RooRealVar(f'mean_{self._pdf_counter}', f'mean_{self._pdf_counter}', 0, -10, 10)
+        sigma = RooRealVar(f'sigma_{self._pdf_counter}', f'sigma_{self._pdf_counter}', 1, 0.001, 10)
         self._pdf_params[f'gaus_{self._pdf_counter}_mean'] = mean
         self._pdf_params[f'gaus_{self._pdf_counter}_sigma'] = sigma
         gaus = RooGaussian(f'gaus_{self._pdf_counter}', f'gaus_{self._pdf_counter}', x, self._pdf_params[f'gaus_{self._pdf_counter}_mean'], self._pdf_params[f'gaus_{self._pdf_counter}_sigma'])
@@ -58,16 +60,22 @@ class Roofitter:
         else:
             return None
         
-    def _build_exp(self, x: RooRealVar = None, return_function: bool = False):
+    def _build_exp(self, x: RooRealVar = None, return_function: bool = False, exp_offset: bool = False):
         
-        alpha = RooRealVar('alpha', 'alpha', -1, -10000, 10000)
-        exp = RooGenericPdf(f'exp_{self._pdf_counter}', f'exp_{self._pdf_counter}', 'exp(-alpha*x)', RooArgList(self._x, alpha))
+        alpha = RooRealVar(f'alpha_{self._pdf_counter}', f'alpha_{self._pdf_counter}', -0.5, -10, 0)
+        offset = None
+        exp = RooGenericPdf(f'exp_{self._pdf_counter}', f'exp_{self._pdf_counter}', f'exp(-alpha_{self._pdf_counter}*x)', RooArgList(self._x, alpha))
         self._pdf_params[f'exp_{self._pdf_counter}_alpha'] = alpha
         self._pdfs[f'exp_{self._pdf_counter}'] = exp
+        if exp_offset:
+            offset = RooRealVar(f'offset_{self._pdf_counter}', f'offset_{self._pdf_counter}', 1, -100, 100)
+            exp_offset = RooGenericPdf(f'exp_{self._pdf_counter}', f'exp_{self._pdf_counter}', f'exp(-alpha_{self._pdf_counter}*(x + offset_{self._pdf_counter}))', RooArgList(self._x, alpha, offset))
+            self._pdf_params[f'exp_{self._pdf_counter}_offset'] = offset
+            self._pdfs[f'exp_{self._pdf_counter}'] = exp_offset
         self._pdf_counter += 1
 
         if return_function:
-            return exp, alpha
+            return exp, alpha, offset
         else:
             return None
         
@@ -97,10 +105,11 @@ class Roofitter:
         frame = self._x.frame()
         self._data_hist.plotOn(frame)
         self._model.plotOn(frame)
+        self._model.paramOn(frame)
         for icomp, component in enumerate(self._pdfs.values()):
             self._model.plotOn(frame, Components={component}, LineColor={DEFAULT_COLORS[icomp%N_COLORS]}, LineStyle='--')
         frame.GetXaxis().SetTitle(kwargs.get('xtitle', ''))
-        frame.Draw()
+        frame.Draw('same')
 
         output_file.cd()
         canvas.Write()
