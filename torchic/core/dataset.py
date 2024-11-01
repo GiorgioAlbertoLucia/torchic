@@ -43,11 +43,6 @@ class Dataset:
         self._open(data, **kwargs)
         self._subsets = SubsetDict()
 
-    #def __getitem__(self, key):
-    #    return Dataset(self._subsets[key])
-        
-    # ADJUST TO HANDLE SUBSETS AS WELL
-        
     def __getitem__(self, key):
         if ':' in key:
             key1, key2 = key.split(':')
@@ -108,6 +103,10 @@ class Dataset:
             print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_path}'+tc.RESET)
             tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
         return tmp_data
+    
+    @property
+    def columns(self):
+        return self._data.columns
     
     @property
     def data(self):
