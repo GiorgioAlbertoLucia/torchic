@@ -9,6 +9,7 @@ gInterpreter.ProcessLine(f'#include "{BETHEBLOCH_DIR}"')
 from ROOT import BetheBloch
 
 from torchic.core.fitter import Fitter, fit_by_slices
+from torchic.core.roofitter import Roofitter, fit_by_slices_roofit
 from torchic.utils.terminal_colors import TerminalColors as tc
 
 DEFAULT_BETHEBLOCH_PARS = { # params for TPC He3 pp
@@ -18,7 +19,8 @@ DEFAULT_BETHEBLOCH_PARS = { # params for TPC He3 pp
                             'kp4': 1.078250,
                             'kp5': 2.048336
                           }
-def pyBetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
+
+def py_BetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
     '''
         Python implementation of the Bethe-Bloch formula.
     '''
@@ -28,7 +30,7 @@ def pyBetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
     bb = np.log(bb + kp3)
     return (kp2 - aa - bb) * kp1 / aa
 
-def pySimilBetheBloch(betagamma, kp1, kp2, kp3):
+def cluster_size_parametrisation(betagamma, kp1, kp2, kp3):
     '''
         Python implementation of a simil Bethe-Bloch formula: kp1 / betagamma**kp2 + kp3
     '''
@@ -100,7 +102,7 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
 
     return bethe_bloch_pars
 
-def cluster_size_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict:
+def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
     '''
         Perform a calibration fit on a 2D histogram.
         The histogram is sliced along the x-axis and fitted with a double Gaussian.
@@ -121,37 +123,21 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dic
                 Last bin to be fitted by slices.
     '''
 
-    #fitter = Fitter('[norm0]*exp(-0.5*(x-[mean0])*(x-[mean0])/([sigma0]*[sigma0])) + [norm1]*exp(-0.5*(x-[mean1])*(x-[mean1])/([sigma1]*[sigma1]))')
-    fitter = Fitter('x < ([mean0] + [tau0]*[sigma0]) ? [norm0]*exp( -0.5*(x-[mean0])*(x-[mean0])/([sigma0]*[sigma0]) ) : [norm0]*exp(-(x-[mean0]-0.5*[sigma0]*[tau0])*[tau0]/[sigma0]) \
-                    + [norm1]*exp(-0.5*(x-[mean1])*(x-[mean1])/([sigma1]*[sigma1]))')
-    #                # + x < ([mean1] + [tau1]*[sigma1]) ? [norm1]*exp( -0.5*(x-[mean1])*(x-[mean1])/([sigma1]*[sigma1]) ) : [norm1]*exp(-(x-[mean1]-0.5*[sigma1]*[tau1])*[tau1]/[sigma1])')
-    fitter.set_param_range('norm0', 2e3, 1e5)
-    fitter.set_param_range('norm1', 100., 1e5)
-    fitter.set_param_range('mean0', 2.5, 1.5, 3.5)
-    fitter.set_param_range('mean1', 7., 5.5, 10.)
-    fitter.set_param_range('sigma0', 0.5, 0.2, 1.5)
-    fitter.set_param_range('sigma1', 0.5, 0.2, 2.)
-    fitter.set_param_range('tau0', 0., 4.)
-    #fitter.set_param_range('tau1', 0., 2.)
-    kwargs['fit_options'] = 'QLR+' # fit option for the slice fit
-    #kwargs['init_mode'] = 'multi_gaus'
-    kwargs['n_components'] = 2
-    if kwargs.get('save_slices', False):
-        th1_dir = output_file.mkdir('Slices')
-        kwargs['output_dir'] = th1_dir
-    fit_results = fit_by_slices(h2, fitter, **kwargs)
+    fit_results = fit_by_slices_roofit(h2, fitter, **kwargs)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
     gaussian_integral = lambda norm, sigma: norm * np.sqrt(2*np.pi) * sigma
-    fit_results['integral1'] = gaussian_integral(fit_results['norm1'], fit_results['sigma1'])
-    fit_results['mean_err1'] = fit_results['sigma1'] / np.sqrt(fit_results['integral1'])
-    fit_results['res1'] = fit_results['sigma1'] / fit_results['mean1']
-    fit_results['res1_err'] = np.sqrt((fit_results['sigma1_err']/fit_results['mean1'])**2 + (fit_results['sigma1']*fit_results['mean_err1']/fit_results['mean1']**2)**2)
 
-    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['mean1']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err1']))
-    graph_sigma = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['sigma1']), np.array(fit_results['bin_error']), np.array(fit_results['sigma1_err']))
-    graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res1']), np.array(fit_results['bin_error']),  np.array(fit_results['res1_err']))
+    mean_label = kwargs.get('mean_label', 'mean1')
+    sigma_label = kwargs.get('sigma_label', 'sigma1')
+    sigma_err_label = kwargs.get('sigma_err_label', 'sigma1_err')
+    fit_results['mean_err'] = fit_results[sigma_label] / np.sqrt(fit_results['integral'])
+    fit_results['res'] = fit_results[sigma_label] / fit_results[mean_label]
+    fit_results['res_err'] = np.sqrt((fit_results[sigma_err_label]/fit_results[mean_label])**2 + (fit_results[sigma_label]*fit_results['mean_err']/fit_results[mean_label]**2)**2)
+
+    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results[mean_label]), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
+    graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res']), np.array(fit_results['bin_error']),  np.array(fit_results['res_err']))
     #graph_tau = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['tau1']), np.array(fit_results['bin_error']), np.array(fit_results['tau1_err']))
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
@@ -161,6 +147,8 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dic
     simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_PARAMS))
     simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
     simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
+    simil_bethe_bloch_func.SetParLimits(0, 0., 10.)
+    simil_bethe_bloch_func.SetParLimits(1, 0., 5.)
     graph_mean.Fit(simil_bethe_bloch_func, 'RMS+')
     
     resolution_fit = TF1('resolution_fit', '[0]', xmin, xmax)
