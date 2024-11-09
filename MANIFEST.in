@@ -1,1 +1,3 @@
 include torchic/physics/BetheBloch.hh
+include torchic/physics/simulations/ExponentialDecaySimulation.cpp
+include torchic/physics/simulations/TwoBodyDecaySimulation.cpp
