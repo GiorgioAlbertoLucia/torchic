@@ -14,7 +14,6 @@ class SubsetDict:
     def __init__(self):
 
         self._subsets = {}
-        self.add_subset('full', lambda: slice(None))
 
     def add_subset(self, name, condition):
 
@@ -109,6 +108,14 @@ class Dataset:
         return self._data.columns
     
     @property
+    def shape(self):
+        return self._data.shape
+    
+    @property
+    def loc(self):
+        return self._data.loc
+    
+    @property
     def data(self):
         return self._data
     
@@ -117,7 +124,10 @@ class Dataset:
         return self._subsets
     
     def add_subset(self, name, condition):
-        self._subsets.add_subset(name, lambda: self._data[condition])
+        '''
+            Add a subset to the dataset by applying a condition.
+        '''
+        self._subsets.add_subset(name, lambda: self._data.loc[condition])
 
     def query(self, expr: str, *, inplace: bool = True, **kwargs) -> pd.DataFrame | None:
         '''

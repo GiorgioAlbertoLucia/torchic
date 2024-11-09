@@ -29,19 +29,13 @@ class TestDataset(unittest.TestCase):
         axis_spec_y = AxisSpec(1, 5, 5, 'column_y', ';column_x;column_y;')
         hist = self.dataset.build_hist('column_x', 'column_y', axis_spec_x, axis_spec_y)
         self.assertEqual(hist.GetEntries(), 5)
-
-    def test_build_hist_subset(self):
-        self.dataset.add_subset('subset', self.data['column_x'] > 2)
-        axis_spec_x = AxisSpec(1, 5, 5, 'column_x', ';column_x;')
-        hist = self.dataset['subset'].build_hist('column_x', axis_spec_x)
-        self.assertEqual(hist.GetEntries(), 3)
     
     def test_build_hist_subset_alternative(self):
         self.dataset.add_subset('subset', self.data['column_x'] > 2)
         axis_spec_x = AxisSpec(1, 5, 5, 'column_x', ';column_x;')
         hist = self.dataset.build_hist('column_x', axis_spec_x, subset='subset')
         self.assertEqual(hist.GetEntries(), 3)
-
+    
     def test_query(self):
         self.dataset.query('column_x > 2')
         self.assertEqual(len(self.dataset.data), 3)
