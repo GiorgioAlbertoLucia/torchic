@@ -215,3 +215,57 @@ def scale_hist_axis(old_hist: TH1F, scale_factor: float, **kwargs) -> TH1F | Non
         old_hist.SetName(kwargs.get('name', f'{old_hist.GetName()}_scaled'))
     else:
         return new_hist
+    
+def get_mean(hist: TH1F, low_edge: float = None, high_edge: float = None) -> float:
+    '''
+        Return the mean of a histogram in a given range
+        
+        Args:
+            hist (TH1F): The histogram to calculate the mean
+            low_edge (float): The lower edge of the histogram
+            high_edge (float): The upper edge of the histogram
+            
+        Returns:
+            float: The mean of the histogram
+    '''
+    if low_edge is None:
+        low_edge = hist.GetXaxis().GetXmin()
+    if high_edge is None:
+        high_edge = hist.GetXaxis().GetXmax()
+    total_content = 0
+    total_value = 0
+    for ibin in range(hist.FindBin(low_edge), hist.FindBin(high_edge)):
+        total_content += hist.GetBinContent(ibin)
+        total_value += hist.GetBinContent(ibin) * hist.GetBinCenter(ibin)
+    if total_content > 0:
+        return total_value / total_content
+    else:
+        return 0
+    
+def get_rms(hist: TH1F, low_edge: float = None, high_edge: float = None) -> float:
+    '''
+        Return the RMS of a histogram in a given range
+        
+        Args:
+            hist (TH1F): The histogram to calculate the RMS
+            low_edge (float): The lower edge of the histogram
+            high_edge (float): The upper edge of the histogram
+            
+        Returns:
+            float: The RMS of the histogram
+    '''
+    if low_edge is None:
+        low_edge = hist.GetXaxis().GetXmin()
+    if high_edge is None:
+        high_edge = hist.GetXaxis().GetXmax()
+    total_content = 0
+    total_value = 0
+    total_value2 = 0
+    for ibin in range(hist.FindBin(low_edge), hist.FindBin(high_edge)):
+        total_content += hist.GetBinContent(ibin)
+        total_value += hist.GetBinContent(ibin) * hist.GetBinCenter(ibin)
+        total_value2 += hist.GetBinContent(ibin) * hist.GetBinCenter(ibin) * hist.GetBinCenter(ibin)
+    if total_content > 0:
+        return np.sqrt(total_value2 / total_content - (total_value / total_content) ** 2)
+    else:
+        return 0
