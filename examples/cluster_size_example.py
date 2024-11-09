@@ -182,6 +182,5 @@ if __name__ == '__main__':
     
     cluster_size_calibration_example(output_file)
     cluster_size_cut_example(output_file)
-    check_us()
 
     output_file.Close()
