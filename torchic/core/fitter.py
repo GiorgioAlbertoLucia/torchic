@@ -233,3 +233,47 @@ def fit_by_slices(h2: TH2F, fitter: Fitter, **kwargs) -> pd.DataFrame:
             df_bin_fit_result = pd.DataFrame.from_dict({key: [val] for key, val in bin_fit_result.items()})
             fit_results = pd.concat([fit_results, df_bin_fit_result], ignore_index=True)
     return fit_results
+
+def multi_fit_by_slices(h2: TH2F, fitters: dict, **kwargs) -> pd.DataFrame:
+    '''
+        Fit a TH2F histogram by slicing it along the x-axis and fitting each slice.
+        Returns a pandas DataFrame with the fit results
+
+        Parameters:
+        - h2: TH2F
+            The 2D histogram to be fitted by slices.
+        - fitter: Fitter
+            The Fitter object to be used for the fits.
+        - **kwargs:
+            Additional arguments to be passed to the fit_TH1 function.
+            -> first_bin_fit_by_slices: int
+                First bin to be fitted by slices.
+            -> last_bin_fit_by_slices: int
+                Last bin to be fitted by slices.
+            -> init_mode: str
+                Argument of Fitter.init_mode()
+            -> fit_range: tuple
+                Range for the slice fit
+            -> fit_options: str
+                Options for the slice fit
+    '''
+
+    fit_results = pd.DataFrame()
+    for ibin in range(kwargs.get('first_bin_fit_by_slices', 1), kwargs.get('last_bin_fit_by_slices', h2.GetNbinsX() + 1)):
+        fitter = None
+        if h2.GetXaxis().GetBinCenter(ibin) <= fitters.keys()[0]:
+            fitter = fitters[fitters.keys()[0]]
+        else:
+            fitter = fitters[fitters.keys()[1]]
+        h1 = h2.ProjectionY(f'proj_{ibin}', ibin, ibin)
+        bin_fit_result = fit_TH1(h1, fitter, **kwargs)
+        if bin_fit_result:
+            if kwargs.get('output_dir', None):
+                output_dir = kwargs['output_dir']
+                output_dir.cd()
+                h1.Write(f'h1_{ibin}')
+            bin_fit_result['integral'] = h1.Integral(1, h1.GetNbinsX())
+            bin_fit_result['bin_center'] = h2.GetXaxis().GetBinCenter(ibin)
+            df_bin_fit_result = pd.DataFrame.from_dict({key: [val] for key, val in bin_fit_result.items()})
+            fit_results = pd.concat([fit_results, df_bin_fit_result], ignore_index=True)
+    return fit_results
