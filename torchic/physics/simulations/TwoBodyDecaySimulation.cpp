@@ -12,7 +12,7 @@
 #include <TF1.h>
 #include <TString.h>
 
-void run_simulation(const char * MotherFileName,const char * MotherHistName,const char * inputTimeFileName,const char * inputTimeHistName,const char * OutputFileName,float motherMass,float firstDaugtherMass,float secondDaughterMass,float detectorLimit=0.,const int nEvents=1000000,int seed=0)
+void RunTwoBodyDecaySimulation(const char * MotherFileName,const char * MotherHistName,const char * inputTimeFileName,const char * inputTimeHistName,const char * OutputFileName,float motherMass,float firstDaugtherMass,float secondDaughterMass,float detectorLimit=0.,const int nEvents=1000000,int seed=0)
 {
     /*
     *   This function is used to run the simulation of the two body decay of the mother particle

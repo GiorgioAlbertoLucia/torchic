@@ -3,7 +3,7 @@
 #include <TRandom3.h>
 #include <Riostream.h>
 
-TH1F build_time_distribution(double tau, int nevents, int nbins, double totT, int seed)
+TH1F RunExponentialDecaySimulation(double tau, int nevents, int nbins, double totT, int seed)
 {
     /*
         Function to generate a time distribution of a decay process
