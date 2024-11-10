@@ -38,7 +38,7 @@ class Dataset:
                     - tree_name (str): The name of the tree in the root file.
         '''
         
-        self._data = None
+        self._data = pd.DataFrame()
         self._open(data, **kwargs)
         self._subsets = SubsetDict()
 
@@ -53,17 +53,13 @@ class Dataset:
         self._data[key] = value
 
     def _open(self, data, **kwargs):
-        
-        self._data = pd.DataFrame()
 
         if isinstance(data, pd.DataFrame):
             self._data = data
         elif isinstance(data, str) or (isinstance(data, list) and all(isinstance(file, str) for file in data)):
             self._files = data if isinstance(data, list) else [data]
             for file in self._files:
-                if file.endswith('.root'):
-                    self._data = pd.concat([self._data, self._open_root(file, **kwargs)], ignore_index=True, copy=False)
-                elif file.endswith('.csv'):
+                if file.endswith('.csv'):
                     print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+file+tc.RESET)
                     self._data = pd.concat([self._data, pd.read_csv(file, **kwargs)], ignore_index=True, copy=False)
                 elif file.endswith('.parquet'):
@@ -74,35 +70,46 @@ class Dataset:
         else:
             raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'Input data must be a string, a list of strings, or a pandas DataFrame.')
         
-    def _open_root(self, file, **kwargs) -> pd.DataFrame:
+    @classmethod
+    def from_root(cls, files, tree_name: str, folder_name: str = None, columns: list = None, **kwargs) -> pd.DataFrame:
+
+        init_data = pd.DataFrame()
+
+        if isinstance(files, str) or (isinstance(files, list) and all(isinstance(file, str) for file in files)):
+            cls._files = files if isinstance(files, list) else [files]
+        else: 
+            raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'Input data must be a string or a list of strings.')
         
-        tree_name = kwargs.get('tree_name', None)
-        uproot_kwargs = {key: value for key, value in kwargs.items() if key not in ['tree_name', 'columns', 'folder_name']}
-        if tree_name is None:  
-            print(tc.RED+'[ERROR]: '+tc.RESET+'tree_name must be specified when using a .root file.')
-            return
+        for file in cls._files:
+        
+            uproot_kwargs = {key: value for key, value in kwargs.items() if key not in ['tree_name', 'columns', 'folder_name']}
+            if tree_name is None:  
+                print(tc.RED+'[ERROR]: '+tc.RESET+'tree_name must be specified when using a .root file.')
 
-        columns = kwargs.get('columns', None)
-        folder_name = kwargs.get('folder_name', None)
-        if folder_name is None:
-            return uproot.open(f'{file}:{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
+            elif folder_name is None:
+                data =  uproot.open(f'{file}:{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
+                init_data = pd.concat([init_data, data], ignore_index=True, copy=False)
 
-        if folder_name[-1] != '*':
-            print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{folder_name}/{tree_name}'+tc.RESET)
-            return uproot.open(f'{file}:{folder_name}/{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
+            elif folder_name[-1] != '*':
+                print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{folder_name}/{tree_name}'+tc.RESET)
+                data = uproot.open(f'{file}:{folder_name}/{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
+                init_data = pd.concat([init_data, data], ignore_index=True, copy=False)
 
-        file_folders = uproot.open(file).keys()
-        tree_path_list = []
-        for folder in file_folders:
-            if folder_name[:-1] in folder and tree_name in folder:
-                tree_path_list.append(folder)
+            else:
+                file_folders = uproot.open(file).keys()
+                tree_path_list = []
+                for folder in file_folders:
+                    if folder_name[:-1] in folder and tree_name in folder:
+                        tree_path_list.append(folder)
 
-        tmp_data = pd.DataFrame()
-        for tree_path in tree_path_list:
-            print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_path}'+tc.RESET)
-            tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
-        return tmp_data
-    
+                tmp_data = pd.DataFrame()
+                for tree_path in tree_path_list:
+                    print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_path}'+tc.RESET)
+                    tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
+                init_data = pd.concat([init_data, tmp_data], ignore_index=True, copy=False)
+
+        return cls(init_data, **kwargs)
+          
     @property
     def columns(self):
         return self._data.columns
