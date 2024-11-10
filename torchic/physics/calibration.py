@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 from ROOT import TH2F, TGraphErrors, TDirectory, TF1, gInterpreter, TCanvas
 
@@ -8,8 +9,7 @@ BETHEBLOCH_DIR = os.path.join(CURRENT_DIR, 'BetheBloch.hh')
 gInterpreter.ProcessLine(f'#include "{BETHEBLOCH_DIR}"')
 from ROOT import BetheBloch
 
-from torchic.core.fitter import Fitter, fit_by_slices
-from torchic.core.roofitter import Roofitter, fit_by_slices_roofit
+from torchic.core.roofitter import Roofitter
 from torchic.utils.terminal_colors import TerminalColors as tc
 
 DEFAULT_BETHEBLOCH_PARS = { # params for TPC He3 pp
@@ -36,7 +36,7 @@ def cluster_size_parametrisation(betagamma, kp1, kp2, kp3):
     '''
     return kp1 / betagamma**kp2 + kp3
 
-def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict:
+def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
     '''
         Perform a Bethe-Bloch calibration on a 2D histogram.
         The histogram is sliced along the x-axis and fitted with a Gaussian.
@@ -44,6 +44,8 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
         The bin error is calculated as the bin width.
         The mean error is calculated as mean * expected resolution.
         The histogram, curve and TGraphErrors are stored in the output file.
+
+        IMPORTANT REQUIREMENT: if not provided, the names of the parameters of the gaussian must be 'mean', 'sigma'
 
         Parameters:
         - h2: TH2F
@@ -56,22 +58,43 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, **kwargs) -> dict
                 First bin to be fitted by slices.
             -> last_bin_fit_by_slices: int
                 Last bin to be fitted by slices.
+            -> mean_label: str
+                The name of the mean parameter of the gaussian.
+            -> sigma_label: str
+                The name of the sigma parameter of the gaussian.
+            -> f'{signal_func_name}_sigma_err': str
+                The name of the error of the sigma parameter of the gaussian.
     '''
 
-    fitter = Fitter('gaus')
-    kwargs['fit_options'] = 'QL+' # fit option for the slice fit
-    fit_results = fit_by_slices(h2, fitter, init_mode='gaus', **kwargs)
+    fit_results = pd.DataFrame()
+    for xbin in range(kwargs.get('first_bin_fit_by_slices'), kwargs.get('last_bin_fit_by_slices')+1):
+        h = h2.ProjectionY(f'h_{xbin}', xbin, xbin, 'e')
+        xvalue = h2.GetXaxis().GetBinCenter(xbin)
+        funcs_to_fit = kwargs.get('funcs_to_fit', list(fitter.pdfs.keys()))
+
+        fitter.init_gaus(h, kwargs.get('signal_func_name', 'gaus'), *kwargs.get('signal_range', (h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax())))
+        fractions = fitter.fit(h, h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax(), funcs_to_fit=funcs_to_fit)
+        if 'output_dir' in kwargs:
+            kwargs['output_dir'].cd()
+            fitter.plot(kwargs['output_dir'], canvas_name=f'c_{h.GetName()}', funcs_to_plot=funcs_to_fit)
+
+        bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
+        bin_fit_results['bin_center'] = xvalue
+        fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
+
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
-    fit_results['mean_err'] = fit_results['mean'] * 0.09
-    fit_results['res'] = fit_results['sigma'] / fit_results['mean']
-    fit_results['res_err'] = np.sqrt((fit_results['sigma_err']/fit_results['mean'])**2 + (fit_results['sigma']*fit_results['mean_err']/fit_results['mean']**2)**2)
 
-    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['mean']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
+    signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
+    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['integral'])
+    fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
+    fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
+
+    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results[f'{signal_func_name}_mean']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
     graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res']), np.array(fit_results['bin_error']),  np.array(fit_results['res_err']))
-    
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
+
     bethe_bloch_func = TF1('bethe_bloch_func', BetheBloch, xmin, xmax, 5)
     bethe_bloch_pars = kwargs.get('bethe_bloch_pars', deepcopy(DEFAULT_BETHEBLOCH_PARS))
     bethe_bloch_func.SetParNames(*bethe_bloch_pars.keys())
@@ -110,6 +133,8 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
         The bin error is calculated as the bin width.
         The mean error is calculated as sigma / sqrt(n_entries).
 
+        IMPORTANT REQUIREMENT: if not provided, the names of the parameters of the gaussian must be 'mean1', 'sigma1'
+
         Parameters:
         - h2: TH2F
             The 2D histogram to be calibrated.
@@ -121,22 +146,38 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
                 First bin to be fitted by slices.
             -> last_bin_fit_by_slices: int
                 Last bin to be fitted by slices.
+            -> mean_label: str
+                The name of the mean parameter of the gaussian.
+            -> sigma_label: str
+                The name of the sigma parameter of the gaussian.
+            -> sigma_err_label: str
+                The name of the error of the sigma parameter of the gaussian.
     '''
 
-    fit_results = fit_by_slices_roofit(h2, fitter, **kwargs)
+    fit_results = pd.DataFrame()
+    for xbin in range(kwargs.get('first_bin_fit_by_slices'), kwargs.get('last_bin_fit_by_slices')+1):
+        h = h2.ProjectionY(f'h_{xbin}', xbin, xbin, 'e')
+        xvalue = h2.GetXaxis().GetBinCenter(xbin)
+        funcs_to_fit = kwargs.get('funcs_to_fit', list(fitter.pdfs.keys()))
+
+        fractions = fitter.fit(h, h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax(), funcs_to_fit=funcs_to_fit)
+        if 'output_dir' in kwargs:
+            kwargs['output_dir'].cd()
+            fitter.plot(kwargs['output_dir'], canvas_name=f'c_{h.GetName()}', funcs_to_plot=funcs_to_fit)
+
+        bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
+        bin_fit_results['bin_center'] = xvalue
+        fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
-    gaussian_integral = lambda norm, sigma: norm * np.sqrt(2*np.pi) * sigma
 
-    mean_label = kwargs.get('mean_label', 'mean1')
-    sigma_label = kwargs.get('sigma_label', 'sigma1')
-    sigma_err_label = kwargs.get('sigma_err_label', 'sigma1_err')
-    fit_results['mean_err'] = fit_results[sigma_label] / np.sqrt(fit_results['integral'])
-    fit_results['res'] = fit_results[sigma_label] / fit_results[mean_label]
-    fit_results['res_err'] = np.sqrt((fit_results[sigma_err_label]/fit_results[mean_label])**2 + (fit_results[sigma_label]*fit_results['mean_err']/fit_results[mean_label]**2)**2)
+    signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
+    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['integral'])
+    fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
+    fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
 
-    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results[mean_label]), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
+    graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results[f'{signal_func_name}_mean']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
     graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res']), np.array(fit_results['bin_error']),  np.array(fit_results['res_err']))
     #graph_tau = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['tau1']), np.array(fit_results['bin_error']), np.array(fit_results['tau1_err']))
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))

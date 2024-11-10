@@ -10,9 +10,9 @@ from torchic.core.roofitter import Roofitter
 
 def cluster_size_calibration_example(output_file: TFile):
     '''
-        The following function performs a TPC calibration (of He3) with the Bethe-Bloch formula.
-        The calibration is performed on the dE/dx vs. beta*gamma plot and the data is retrieved from a tree (O2Physics table).
-        The data is preselected with several cuts, notably a ITS cluster size cut.
+        The following function performs a ITS calibration (of protons) with a simil-Bethe-Bloch formula.
+        The calibration is performed on the <ITS Cluster size> x <cos#lambda> vs. #beta*#gamma plot and the data is retrieved from a tree (O2Physics table).
+        The data is preselected with several cuts.
     '''
 
     input_file = 'data/LHC23_PbPb_pass4_long_same.root'    
