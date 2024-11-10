@@ -1,7 +1,13 @@
-import pandas as pd
-from copy import deepcopy
-from ROOT import TH1F, TH2F, TCanvas, TDirectory
-from ROOT import RooRealVar, RooGaussian, RooCrystalBall, RooAddPdf, RooGenericPdf, RooArgList, RooDataHist, RooGExpModel, RooArgSet
+import os
+from ROOT import TH1F, TCanvas, TDirectory, gInterpreter
+from ROOT import RooRealVar, RooGaussian, RooCrystalBall, RooAddPdf, RooGenericPdf, RooArgList, RooDataHist, RooArgSet
+
+from torchic.core.histogram import get_mean, get_rms
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOCUSTOMPDFS_DIR = os.path.join(CURRENT_DIR, 'RooCustomPdfs')
+gInterpreter.ProcessLine(f'#include "{ROOCUSTOMPDFS_DIR}/RooGausExp.cxx"')
+from ROOT import RooGausExp
 
 DEFAULT_COLORS = [
     797,    # kOrange-3
@@ -14,6 +20,13 @@ N_COLORS = len(DEFAULT_COLORS)
 class Roofitter:
     '''
         Class to fit a RooFit model to data. Multiple functions can be combined.
+        Available functions are:
+            - 'gaus': Gaussian
+            - 'exp_mod_gaus': Exponential modified Gaussian
+            - 'exp': Exponential
+            - 'exp_offset': Exponential with offset
+            - 'crystal_ball': Crystal Ball
+            - 'polN': Polynomial of order N
     '''
     def __init__(self, x: RooRealVar, pdfs):
         self._x = x
@@ -37,6 +50,10 @@ class Roofitter:
     @property
     def fit_results(self):
         return self._fit_results
+
+    @property
+    def pdfs(self):
+        return self._pdfs
 
     def init_param(self, name: str, value: float, min: float = None, max: float = None) -> None:
         '''
@@ -92,7 +109,7 @@ class Roofitter:
         self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_mean'] = RooRealVar(f'mean_{self._pdf_counter}', f'mean_{self._pdf_counter}', 0, -10, 10)
         self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_sigma'] = RooRealVar(f'sigma_{self._pdf_counter}', f'sigma_{self._pdf_counter}', 1, 0.001, 10)
         self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_tau'] = RooRealVar(f'tau_{self._pdf_counter}', f'tau_{self._pdf_counter}', -0.5, -10, 0)
-        exp_mod_gaus = RooGExpModel(f'exp_mod_gaus_{self._pdf_counter}', f'exp_mod_gaus_{self._pdf_counter}',
+        exp_mod_gaus = RooGausExp(f'exp_mod_gaus_{self._pdf_counter}', f'exp_mod_gaus_{self._pdf_counter}',
                                     x, self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_mean'], 
                                     self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_sigma'], self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_tau'])
         self._pdfs[f'exp_mod_gaus_{self._pdf_counter}'] = exp_mod_gaus
@@ -163,6 +180,15 @@ class Roofitter:
         else:
             return None
 
+    def init_gaus(self, hist: TH1F, func_name: str, xmin: float = None, xmax: float = None) -> None:
+        '''
+            Initialise the parameters of a Gaussian function from a histogram
+        '''
+        mean = get_mean(hist, xmin, xmax)
+        sigma = get_rms(hist, xmin, xmax)
+        self.init_param(f'{func_name}_mean', mean, mean - 3*sigma, mean + 3*sigma)
+        self.init_param(f'{func_name}_sigma', sigma, 0.1, 3*sigma)
+
     def fit(self, hist: TH1F, xmin: float = None, xmax: float = None, **kwargs) -> list:
         '''
             Fit the pdf to the data
@@ -203,11 +229,19 @@ class Roofitter:
 
         canvas = TCanvas(kwargs.get('canvas_name', 'canvas'), 'canvas', 800, 600)
         frame = self._x.frame()
+        if not self._data_hist:
+            print('No data histogram to plot')
+        else: 
+            print('Plotting data histogram')
         self._data_hist.plotOn(frame)
+        if not self._model:
+            print('No model to plot')
+        else:
+            print('Plotting model')
         self._model.plotOn(frame)
         self._model.paramOn(frame)
         for icomp, component in enumerate(funcs_to_plot):
-            self._model.plotOn(frame, Components={self._pdfs[component]}, LineColor={DEFAULT_COLORS[icomp%N_COLORS]}, LineStyle='--')
+            self._model.plotOn(frame, Components={self._pdfs[component]}, LineColor={DEFAULT_COLORS[icomp%N_COLORS]}, LineStyle={'--'})
         frame.GetXaxis().SetTitle(kwargs.get('xtitle', ''))
         frame.Draw('same')
 
@@ -230,47 +264,3 @@ class Roofitter:
             integral = norm_integral * self._fit_fractions[pdf.GetName()]#* exp_events
             integrals[pdf.GetName()] = integral
         return integrals
-
-# Standalone functions
-
-def fit_by_slices_roofit(h2: TH2F, fitter: Roofitter, **kwargs) -> pd.DataFrame:
-    '''
-        Fit a TH2F histogram by slicing it along the x-axis and fitting each slice.
-        Returns a pandas DataFrame with the fit results
-
-        Parameters:
-        - h2: TH2F
-            The 2D histogram to be fitted by slices.
-        - fitter: Fitter
-            The Fitter object to be used for the fits.
-        - **kwargs:
-            Additional arguments to be passed to the fit_TH1 function.
-            -> first_bin_fit_by_slices: int
-                First bin to be fitted by slices.
-            -> last_bin_fit_by_slices: int
-                Last bin to be fitted by slices.
-            -> output_dir: TDirectory
-                Output directory to save the histograms
-            -> xmin: float
-                Minimum x-value to be used in the fit
-            -> xmax: float
-                Maximum x-value to be used in the fit
-            -> funcs_to_fit: list
-                List of functions to be fitted
-    '''
-
-    fit_results = pd.DataFrame()
-    for ibin in range(kwargs.get('first_bin_fit_by_slices', 1), kwargs.get('last_bin_fit_by_slices', h2.GetNbinsX() + 1)):
-        h1 = h2.ProjectionY(f'proj_{ibin}', ibin, ibin)
-        fitter.fit(h1, **kwargs)
-
-        if kwargs.get('output_dir', None):
-            output_dir = kwargs['output_dir']
-            fitter.plot(output_dir, canvas_name=f'c_{h1.GetName()}')
-        bin_fit_results = deepcopy(fitter.fit_results)
-        bin_fit_results['integral'] = h1.Integral(1, h1.GetNbinsX())
-        bin_fit_results['bin_center'] = h2.GetXaxis().GetBinCenter(ibin)
-
-        df_bin_fit_result = pd.DataFrame.from_dict({key: [value] for key, value in bin_fit_results.items()})
-        fit_results = pd.concat([fit_results, df_bin_fit_result], ignore_index=True)
-    return fit_results
