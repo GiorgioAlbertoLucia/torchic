@@ -3,9 +3,7 @@ from torchic.core.api import (
     AxisSpec,
     HistLoadInfo,
     histogram,
-    Fitter,
-    fit_TH1,
-    fit_by_slices,
+    Roofitter,
 )
 
 from torchic import physics
@@ -16,9 +14,7 @@ __all__ = [
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
-    'Fitter',
-    'fit_TH1',
-    'fit_by_slices',
+    'Roofitter',
     'physics',
     'utils',
 ]

@@ -1,3 +1,5 @@
 include torchic/physics/BetheBloch.hh
-include torchic/physics/simulations/ExponentialDecaySimulation.cpp
-include torchic/physics/simulations/TwoBodyDecaySimulation.cpp
+include torchic/core/RooCustomPdfs/RooGausExp.hh
+include torchic/core/RooCustomPdfs/RooGausExp.cxx
+include torchic/physics/simulations/ExponentialDecaySimulation.cxx
+include torchic/physics/simulations/TwoBodyDecaySimulation.cxx

@@ -8,10 +8,8 @@ from torchic.core.histogram import (
     HistLoadInfo
 )
 
-from torchic.core.fitter import (
-    Fitter,
-    fit_TH1,
-    fit_by_slices,
+from torchic.core.roofitter import (
+    Roofitter
 )
 
 __all__ = [
@@ -19,7 +17,5 @@ __all__ = [
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
-    'Fitter',
-    'fit_TH1',
-    'fit_by_slices',
+    'Roofitter',
 ]
