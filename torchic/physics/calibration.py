@@ -184,17 +184,19 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     fit_results['bin_error'] = bin_error
 
     signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
-    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['integral'])
+    fit_results['unnorm_integral'] = fit_results['integral'] * h.Integral()
+    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['unnorm_integral'])
     fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
     fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
 
     graph_mean = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results[f'{signal_func_name}_mean']), np.array(fit_results['bin_error']), np.array(fit_results['mean_err']))
     graph_res = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['res']), np.array(fit_results['bin_error']),  np.array(fit_results['res_err']))
+    graph_int = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['integral']), np.array(fit_results['bin_error']), np.zeros(len(fit_results['bin_center'])))
     #graph_tau = TGraphErrors(len(fit_results), np.array(fit_results['bin_center']), np.array(fit_results['tau1']), np.array(fit_results['bin_error']), np.array(fit_results['tau1_err']))
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
     
-    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[0]/x^[1] + [2] * [3]^[4]', xmin, xmax)
+    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '([0]/x^[1] + [2]) * [3]^[4]', xmin, xmax)
     DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5, 'charge': charge, 'kp4': 2.}
     simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_PARAMS))
     simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
@@ -232,5 +234,6 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     graph_mean.Write('g_MeanBySlices')
     graph_res.SetTitle('; ; #sigma_{1}/#mu_{1}')
     graph_res.Write('g_ResBySlices')
+    graph_int.Write('g_IntegralBySlices')
 
     return simil_bethe_bloch_pars, resolution
