@@ -30,11 +30,11 @@ def py_BetheBloch(betagamma, kp1, kp2, kp3, kp4, kp5):
     bb = np.log(bb + kp3)
     return (kp2 - aa - bb) * kp1 / aa
 
-def cluster_size_parametrisation(betagamma, kp1, kp2, kp3):
+def cluster_size_parametrisation(betagamma, kp1, kp2, kp3, charge, kp4):
     '''
         Python implementation of a simil Bethe-Bloch formula: kp1 / betagamma**kp2 + kp3
     '''
-    return kp1 / betagamma**kp2 + kp3
+    return (kp1 / betagamma**kp2 + kp3) * charge ** kp4
 
 def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
     '''
@@ -125,7 +125,7 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter
 
     return bethe_bloch_pars
 
-def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
+def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, charge: float = 1., fit_charge: bool = False, **kwargs) -> dict:
     '''
         Perform a calibration fit on a 2D histogram.
         The histogram is sliced along the x-axis and fitted with a double Gaussian.
@@ -140,6 +140,13 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
             The 2D histogram to be calibrated.
         - output_file: TDirectory
             The output file where the TGraphErrors will be stored.
+        - fitter: Roofitter
+            The fitter object to be used.
+        - charge: float
+            The charge of the particle.
+        - fit_charge: bool
+            If True, the charge exponent will be fit, while the other parameters will be fixed.
+            If False, the charge exponent will be fixed, while the other parameters will be fit.
         - **kwargs:
             Additional arguments to be passed to the fit_by_slices function.
             -> first_bin_fit_by_slices: int
@@ -152,6 +159,9 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
                 The name of the sigma parameter of the gaussian.
             -> sigma_err_label: str
                 The name of the error of the sigma parameter of the gaussian.
+            -> simil_bethe_bloch_pars: dict
+                The parameters of the simil Bethe-Bloch function.
+                The parameters are kp1, kp2, kp3, charge, kp4.
     '''
 
     fit_results = pd.DataFrame()
@@ -159,6 +169,7 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
         h = h2.ProjectionY(f'h_{xbin}', xbin, xbin, 'e')
         xvalue = h2.GetXaxis().GetBinCenter(xbin)
         funcs_to_fit = kwargs.get('funcs_to_fit', list(fitter.pdfs.keys()))
+        fitter.init_gaus(h, kwargs.get('signal_func_name', 'gaus'), *kwargs.get('signal_range', (h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax())))
 
         fractions = fitter.fit(h, h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax(), funcs_to_fit=funcs_to_fit)
         if 'output_dir' in kwargs:
@@ -183,13 +194,23 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
     
-    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[kp1]/x^[kp2] + [kp3]', xmin, xmax)
-    DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5}
+    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[0]/x^[1] + [2] * [3]^[4]', xmin, xmax)
+    DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5, 'charge': charge, 'kp4': 2.}
     simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_PARAMS))
-    simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
     simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
-    simil_bethe_bloch_func.SetParLimits(0, 0., 10.)
-    simil_bethe_bloch_func.SetParLimits(1, 0., 5.)
+    simil_bethe_bloch_func.FixParameter(3, charge)
+
+    if fit_charge:
+        simil_bethe_bloch_func.FixParameter(0, simil_bethe_bloch_pars['kp1'])
+        simil_bethe_bloch_func.FixParameter(1, simil_bethe_bloch_pars['kp2'])
+        simil_bethe_bloch_func.FixParameter(2, simil_bethe_bloch_pars['kp3'])
+        simil_bethe_bloch_func.SetParLimits(4, 0., 5.)
+    else:
+        simil_bethe_bloch_func.FixParameter(4, simil_bethe_bloch_pars['kp4'])
+        simil_bethe_bloch_func.SetParLimits(0, 0., 10.)
+        simil_bethe_bloch_func.SetParLimits(1, 0., 5.)
+
+    simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
     graph_mean.Fit(simil_bethe_bloch_func, 'RMS+')
     
     resolution_fit = TF1('resolution_fit', '[0]', xmin, xmax)
@@ -198,9 +219,12 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     resolution = resolution_fit.GetParameter(0)
 
     print(tc.GREEN+'[INFO]:'+tc.RESET+'-------- BETHE BLOCH PARAMETRISATION --------')
-    for ipar, par in simil_bethe_bloch_pars.items():
-        simil_bethe_bloch_pars[ipar] = simil_bethe_bloch_func.GetParameter(ipar)
-        print(tc.GREEN+'[INFO]:'+tc.RED+f'{ipar}:'+tc.RESET, simil_bethe_bloch_func.GetParameter(ipar))
+    for ipar, par in enumerate(simil_bethe_bloch_pars.keys()):
+        if fit_charge and (par == 'charge' or par == 'kp4'):
+            simil_bethe_bloch_pars[par] = simil_bethe_bloch_func.GetParameter(ipar)
+        elif not fit_charge and par != 'charge' and par != 'kp4':
+            simil_bethe_bloch_pars[par] = simil_bethe_bloch_func.GetParameter(par)
+        print(tc.GREEN+'[INFO]:'+tc.RED+f'{par}:'+tc.RESET, simil_bethe_bloch_pars[par])
     print(tc.GREEN+'[INFO]:'+tc.RED+f'\tchi2 / NDF:'+tc.RESET, simil_bethe_bloch_func.GetChisquare(), '/', simil_bethe_bloch_func.GetNDF())
     
     output_file.cd()
