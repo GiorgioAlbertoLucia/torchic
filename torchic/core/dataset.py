@@ -74,6 +74,7 @@ class Dataset:
     def from_root(cls, files, tree_name: str, folder_name: str = None, columns: list = None, **kwargs) -> pd.DataFrame:
 
         init_data = pd.DataFrame()
+        cls._files = []
 
         if isinstance(files, str) or (isinstance(files, list) and all(isinstance(file, str) for file in files)):
             cls._files = files if isinstance(files, list) else [files]
