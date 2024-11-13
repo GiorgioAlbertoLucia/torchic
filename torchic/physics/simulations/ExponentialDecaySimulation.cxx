@@ -3,7 +3,7 @@
 #include <TRandom3.h>
 #include <Riostream.h>
 
-TH1F RunExponentialDecaySimulation(double tau, int nevents, int nbins, double totT, int seed)
+TH1F RunExponentialDecaySimulation(const double tau, const int nevents, const int nbins, const double totT, const int seed)
 {
     /*
         Function to generate a time distribution of a decay process
@@ -17,11 +17,11 @@ TH1F RunExponentialDecaySimulation(double tau, int nevents, int nbins, double to
         Returns:
             TH1F: The time distribution histogram
     */
-    double alfa=1/tau;
+    const double alfa=1/tau;
     gRandom->SetSeed(seed);
-    double delt= totT/nbins;
+    const double delt= totT/nbins;
     TH1F *decayhist = new TH1F("decayhist","Decay",nbins+1,-delt,totT+delt/2);
-    double prob=alfa*delt;
+    const double prob=alfa*delt;
     decayhist->Fill(0.,nevents);
     for(double time=delt; time<totT+delt/2; time+=delt)
     {

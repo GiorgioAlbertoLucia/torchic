@@ -1,9 +1,11 @@
 from torchic.physics.simulations.wrappers import (
+    hello,
     RunExponentialDecaySimulation,
-    #RunTwoBodyDecaySimulation,
+    RunTwoBodyDecaySimulation,
 )
 
 __all__ = [
+    'hello',
     'RunExponentialDecaySimulation',
-    #'RunTwoBodyDecaySimulation',
+    'RunTwoBodyDecaySimulation',
 ]
