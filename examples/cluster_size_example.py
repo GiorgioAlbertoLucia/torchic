@@ -146,8 +146,9 @@ def cluster_size_calibration_example_proton_pid(output_file: TFile):
 
     x = RooRealVar('x', 'x', 1., 9.5)
     fitter = Roofitter(x, ['exp_mod_gaus'])
-    fitter.init_param('exp_mod_gaus_0_mean', 5., 2.5, 6.)
-    fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0.2, 2.)
+    fitter.init_param('exp_mod_gaus_0_mean', 5., 2., 6.)
+    fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0., 10.)
+    fitter.init_param('exp_mod_gaus_0_tau', 1., -10., 10.)    
     cluster_size_pars, its_resolution = cluster_size_calibration(h2_clsize, cluster_size_dir, fitter, **cl_options)
 
     simil_bethe_bloch_func = TF1('f_SimilBetheBloch', '([0]/x^[1] + [2]) * [3]^[4]', 0.3, 4.) # function used in cluster_size_calibration
@@ -310,6 +311,7 @@ def cluster_size_calibration_example_he(output_file: TFile):
     fitter = Roofitter(ITS_cluster_size, ['exp_mod_gaus'])
     fitter.init_param('exp_mod_gaus_0_mean', 8., 5., 10.)
     fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0.2, 2.)
+    fitter.init_param('exp_mod_gaus_0_tau', 1, -10, 10.)
     cluster_size_pars, its_resolution = cluster_size_calibration(h2_clsize, cluster_size_dir, fitter, charge=2., fit_charge=True, **cl_options)
 
     simil_bethe_bloch_func = TF1('f_SimilBetheBloch', '([0]/x^[1] + [2]) * [3]^[4]', 0.3, 4.) # function used in cluster_size_calibration
@@ -391,6 +393,7 @@ def cluster_size_calibration_example_he_free(output_file: TFile):
     fitter = Roofitter(ITS_cluster_size, ['exp_mod_gaus'])
     fitter.init_param('exp_mod_gaus_0_mean', 8., 5., 10.)
     fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0.2, 2.)
+    fitter.init_param('exp_mod_gaus_0_tau', 1, -10, 10.)
     cluster_size_pars, its_resolution = cluster_size_calibration(h2_clsize, cluster_size_dir, fitter, charge=1., fit_charge=False, **cl_options)
 
     simil_bethe_bloch_func = TF1('f_SimilBetheBloch', '([0]/x^[1] + [2]) * [3]^[4]', 0.3, 4.) # function used in cluster_size_calibration
