@@ -25,6 +25,7 @@ class Roofitter:
             - 'exp_mod_gaus': Exponential modified Gaussian
             - 'exp': Exponential
             - 'exp_offset': Exponential with offset
+            - 'comp_exp': Complementary exponential (i.e. 1 - exp(-alpha*x))
             - 'crystal_ball': Crystal Ball
             - 'polN': Polynomial of order N
     '''
@@ -52,6 +53,10 @@ class Roofitter:
         return self._fit_results
 
     @property
+    def fit_fractions(self):
+        return self._fit_fractions
+
+    @property
     def pdfs(self):
         return self._pdfs
 
@@ -76,6 +81,8 @@ class Roofitter:
             returned_function = self._build_exp(return_function=return_function, exp_offset=kwargs.get('exp_offset', False))
         elif pdf == 'exp_offset':
             returned_function = self._build_exp(return_function=return_function, exp_offset=True)
+        elif pdf == 'comp_exp':
+            returned_function = self._build_comp_exp(return_function=return_function)
         elif pdf == 'crystal_ball':
             returned_function = self._build_crystal_ball(return_function=return_function)
         elif 'pol' in pdf:
@@ -132,6 +139,25 @@ class Roofitter:
             exp_offset = RooGenericPdf(f'exp_{self._pdf_counter}', f'exp_{self._pdf_counter}', f'exp(-alpha_{self._pdf_counter}*(x + offset_{self._pdf_counter}))', RooArgList(self._x, alpha, offset))
             self._pdf_params[f'exp_{self._pdf_counter}_offset'] = offset
             self._pdfs[f'exp_{self._pdf_counter}'] = exp_offset
+        self._pdf_counter += 1
+
+        if return_function:
+            return exp, alpha, offset
+        else:
+            return None
+        
+    def _build_comp_exp(self, x: RooRealVar = None, return_function: bool = False) -> tuple | None:
+
+        alpha = RooRealVar(f'alpha_{self._pdf_counter}', f'alpha_{self._pdf_counter}', -0.5, -10, 0)
+        offset = None
+        exp = RooGenericPdf(f'comp_exp_{self._pdf_counter}', f'comp_exp_{self._pdf_counter}', f'1 - exp(-alpha_{self._pdf_counter}*x)', RooArgList(self._x, alpha))
+        self._pdf_params[f'comp_exp_{self._pdf_counter}_alpha'] = alpha
+        self._pdfs[f'comp_exp_{self._pdf_counter}'] = exp
+        #if exp_offset:
+        #    offset = RooRealVar(f'offset_{self._pdf_counter}', f'offset_{self._pdf_counter}', 1, -100, 100)
+        #    exp_offset = RooGenericPdf(f'exp_{self._pdf_counter}', f'exp_{self._pdf_counter}', f'1 - exp(-alpha_{self._pdf_counter}*(x + offset_{self._pdf_counter}))', RooArgList(self._x, alpha, offset))
+        #    self._pdf_params[f'exp_{self._pdf_counter}_offset'] = offset
+        #    self._pdfs[f'exp_{self._pdf_counter}'] = exp_offset
         self._pdf_counter += 1
 
         if return_function:
