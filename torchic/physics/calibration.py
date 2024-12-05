@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from math import erf
 import pandas as pd
 from copy import deepcopy
 from ROOT import TH2F, TGraphErrors, TDirectory, TF1, gInterpreter, TCanvas
@@ -35,6 +36,13 @@ def cluster_size_parametrisation(betagamma, kp1, kp2, kp3, charge, kp4):
         Python implementation of a simil Bethe-Bloch formula: kp1 / betagamma**kp2 + kp3
     '''
     return (kp1 / betagamma**kp2 + kp3) * charge ** kp4
+
+def cluster_size_resolution(betagamma, rp0, rp1, rp2):
+    '''
+        Python implementation of the resolution function.
+    '''
+    return rp0 * erf((betagamma - rp1) / rp2)
+np_cluster_size_resolution = np.vectorize(cluster_size_resolution)
 
 def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
     '''
@@ -215,10 +223,15 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
     graph_mean.Fit(simil_bethe_bloch_func, 'RMS+')
     
-    resolution_fit = TF1('resolution_fit', '[0]', xmin, xmax)
-    resolution_fit.SetParameter(0, 0.1)
+    resolution_fit = TF1('resolution_fit', '[0]*ROOT::Math::erf((x - [1])/[2])', xmin, xmax)
+    resolution_fit.SetParameter(0, 0.24)
+    resolution_fit.SetParameter(1, -0.32)
+    resolution_fit.SetParameter(2, 1.53)
     graph_res.Fit(resolution_fit, 'RMS+')
-    resolution = resolution_fit.GetParameter(0)
+    resolution_params = {'rp0': resolution_fit.GetParameter(0),
+                         'rp1': resolution_fit.GetParameter(1),
+                         'rp2': resolution_fit.GetParameter(2)
+                        }
 
     print(tc.GREEN+'[INFO]:'+tc.RESET+'-------- BETHE BLOCH PARAMETRISATION --------')
     for ipar, par in enumerate(simil_bethe_bloch_pars.keys()):
@@ -236,4 +249,4 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     graph_res.Write('g_ResBySlices')
     graph_int.Write('g_IntegralBySlices')
 
-    return simil_bethe_bloch_pars, resolution
+    return simil_bethe_bloch_pars, resolution_params
