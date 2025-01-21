@@ -196,6 +196,20 @@ class Dataset:
         
         return self._data.apply(func, **kwargs)
     
+    def drop(self, labels=None, *, axis=0, index=None, columns=None, level=None, inplace=True, errors='raise') -> None | pd.DataFrame:
+        '''
+            Drop specified labels from the dataset.
+
+            Args:
+                labels: The labels to drop.
+                **kwargs: Additional keyword arguments to be passed to the pandas drop function.
+        '''
+        
+        if inplace:
+            self._data.drop(labels=labels, axis=axis, index=index, columns=columns, level=level, inplace=True, errors=errors)
+        else:
+            return self._data.drop(labels=labels, axis=axis, index=index, columns=columns, level=level, inplace=False, errors=errors)
+
     def head(self, n: int = 5) -> pd.DataFrame:
         '''
             Return the first n rows of the dataset.
@@ -206,16 +220,14 @@ class Dataset:
         
         return self._data.head(n)
 
-    @overload
-    @signature('str', 'AxisSpec')  
-    def build_hist(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
+    def build_th1(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
         '''
             Build a histogram with one axis
-
+    
             Args:
                 column (str): The column to be histogrammed
                 axis_spec_x (AxisSpec): The specification for the x-axis
-
+    
             Returns:
                 TH1F: The histogram
         '''
@@ -224,19 +236,17 @@ class Dataset:
             return build_TH1(self._subsets[subset][column], axis_spec_x)
         else:
             return build_TH1(self._data[column], axis_spec_x)
-    
-    @build_hist.overload
-    @signature('str', 'str', 'AxisSpec', 'AxisSpec')
-    def build_hist(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
+        
+    def build_th2(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
         '''
             Build a histogram with two axes
-
+    
             Args:
                 column_x (str): The column to be histogrammed on the x-axis
                 column_y (str): The column to be histogrammed on the y-axis
                 axis_spec_x (AxisSpec): The specification for the x-axis
                 axis_spec_y (AxisSpec): The specification for the y-axis
-
+    
             Returns:
                 TH2F: The histogram
         '''
@@ -245,5 +255,47 @@ class Dataset:
             return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
         else:
             return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+
+
+    # Deprecated
+    #@overload
+    #@signature('str', 'AxisSpec')  
+    #def build_hist(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
+    #    '''
+    #        Build a histogram with one axis
+#
+    #        Args:
+    #            column (str): The column to be histogrammed
+    #            axis_spec_x (AxisSpec): The specification for the x-axis
+#
+    #        Returns:
+    #            TH1F: The histogram
+    #    '''
+    #    subset = kwargs.get('subset', None)
+    #    if subset:
+    #        return build_TH1(self._subsets[subset][column], axis_spec_x)
+    #    else:
+    #        return build_TH1(self._data[column], axis_spec_x)
+    #
+    #@build_hist.overload
+    #@signature('str', 'str', 'AxisSpec', 'AxisSpec')
+    #def build_hist(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
+    #    '''
+    #        Build a histogram with two axes
+#
+    #        Args:
+    #            column_x (str): The column to be histogrammed on the x-axis
+    #            column_y (str): The column to be histogrammed on the y-axis
+    #            axis_spec_x (AxisSpec): The specification for the x-axis
+    #            axis_spec_y (AxisSpec): The specification for the y-axis
+#
+    #        Returns:
+    #            TH2F: The histogram
+    #    '''
+    #    subset = kwargs.get('subset', None)
+    #    if subset:
+    #        return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+    #    else:
+    #        return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
     
     
