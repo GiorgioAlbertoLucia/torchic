@@ -4,6 +4,7 @@ from torchic.core.api import (
     HistLoadInfo,
     histogram,
     Roofitter,
+    Plotter,
 )
 
 from torchic import physics
@@ -15,6 +16,7 @@ __all__ = [
     'HistLoadInfo',
     'histogram',
     'Roofitter',
+    'Plotter',
     'physics',
     'utils',
 ]

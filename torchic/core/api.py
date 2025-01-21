@@ -12,10 +12,15 @@ from torchic.core.roofitter import (
     Roofitter
 )
 
+from torchic.core.plotter import (
+    Plotter
+)
+
 __all__ = [
     'Dataset',
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
     'Roofitter',
+    'Plotter'
 ]
