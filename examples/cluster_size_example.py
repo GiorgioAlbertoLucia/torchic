@@ -257,7 +257,6 @@ def cluster_size_calibration_example_proton_pid_mc(output_file: TFile):
     h2_clsize_exp.Write()
     h2_nsigma_its.Write()
 
-
 def cluster_size_cut_example(output_file: TFile):
     '''
         Demonstration of the cluster size cut implementation and its effect on the data.
@@ -590,17 +589,16 @@ def cluster_size_cut_example_he(output_file: TFile):
     h2_clsize_after_cut.Write('h2_clsize_after_cut')  
     h_nsigma_tpc_after_cut.Write('h_nSigmaTPC_after_cut')
 
-
 if __name__ == '__main__':
-    output_file_path = 'data/cluster_size_calibration_example_new.root'
+    output_file_path = 'data/cluster_size_calibration_example_newest.root'
     output_file = TFile(output_file_path, 'recreate')
     
     #cluster_size_calibration_example_proton(output_file)
     #cluster_size_cut_example(output_file)
     cluster_size_calibration_example_proton_pid(output_file)
     cluster_size_calibration_example_proton_pid_mc(output_file)
-    cluster_size_calibration_example_he_free(output_file)
-    cluster_size_cut_example_he(output_file)
+    #cluster_size_calibration_example_he_free(output_file)
+    #cluster_size_cut_example_he(output_file)
     #cluster_size_calibration_example_he_free(output_file)
 
     output_file.Close()

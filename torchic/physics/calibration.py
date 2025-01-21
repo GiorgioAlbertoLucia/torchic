@@ -88,13 +88,14 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter
 
         bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
         bin_fit_results['bin_center'] = xvalue
+        bin_fit_results['unnorm_integral'] = bin_fit_results['integral'] * h.Integral()
         fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
 
     signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
-    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['integral'])
+    fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['unnorm_integral'])
     fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
     fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
 
@@ -186,13 +187,13 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
 
         bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
         bin_fit_results['bin_center'] = xvalue
+        bin_fit_results['unnorm_integral'] = bin_fit_results['integral'] * h.Integral()
         fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
 
     signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
-    fit_results['unnorm_integral'] = fit_results['integral'] * h.Integral()
     fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['unnorm_integral'])
     fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
     fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
