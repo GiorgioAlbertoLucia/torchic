@@ -29,7 +29,7 @@ class Roofitter:
             - 'crystal_ball': Crystal Ball
             - 'polN': Polynomial of order N
     '''
-    def __init__(self, x: RooRealVar, pdfs):
+    def __init__(self, x: RooRealVar, pdfs:list = []) -> None:
         self._x = x
         self._data_hist = None
         
@@ -62,72 +62,84 @@ class Roofitter:
 
     def init_param(self, name: str, value: float, min: float = None, max: float = None) -> None:
         '''
-            Initialise the value of a RooRealVar parameter
+            Initialise the value of a RooRealVar parameter.
+            Default names of the parameters are in the format 'pdfname_counter_paramname'
+            Parameters associated with functions are:
+            * GAUS: mean, sigma
+            * EXP_MOD_GAUS: mean, sigma, tau
+            * EXP: alpha, offset (if exp_offset is True)
+            * COMP_EXP (1 - exp): alpha 
+            * CRYSTAL_BALL: mean, sigma, alphaL, nL, alphaR, nR (if double_sided is True)
+            * CRYSTAL_BALL: mean, sigma, alpha, n (if double_sided is False)
+            * POLN: coeff{i} for i in range(N+1)
         '''
         self._pdf_params[name].setVal(value)
         if min is not None and max is not None:
             self._pdf_params[name].setRange(min, max)   
 
-    def build_pdf(self, pdf, args = None, return_function: bool = False, **kwargs):
+    def build_pdf(self, pdf, args = None, **kwargs):
         '''
             Add a pdf to the list of pdfs to be combined
+
+            Args:
+                pdf (str): Name of the pdf to build
+                args (list): List of arguments to pass to the pdf function (NOT IMPLEMENTED)
+                kwargs (dict): Dictionary of keyword arguments to pass to the pdf function
+                Accepted kwargs:
+                * exp_offset (bool): If True, the exponential function will have an offset (default: False)
+                * double_sided (bool): If True, the crystal ball function will be double sided (default: True)
         '''
         returned_function = None
         if pdf == 'gaus':
-            returned_function = self._build_gaus(return_function=return_function)   
+            returned_function = self._build_gaus()   
         elif pdf == 'exp_mod_gaus':
-            returned_function = self._build_exp_mod_gaus(return_function=return_function)
+            returned_function = self._build_exp_mod_gaus()
         elif pdf == 'exp':
-            returned_function = self._build_exp(return_function=return_function, exp_offset=kwargs.get('exp_offset', False))
+            returned_function = self._build_exp(exp_offset=kwargs.get('exp_offset', False))
         elif pdf == 'exp_offset':
-            returned_function = self._build_exp(return_function=return_function, exp_offset=True)
+            returned_function = self._build_exp(exp_offset=True)
         elif pdf == 'comp_exp':
-            returned_function = self._build_comp_exp(return_function=return_function)
+            returned_function = self._build_comp_exp()
         elif pdf == 'crystal_ball':
-            returned_function = self._build_crystal_ball(return_function=return_function)
+            returned_function = self._build_crystal_ball(double_sided=kwargs.get('double_sided', True))
         elif 'pol' in pdf:
-            returned_function = self._build_polynomial(int(pdf.split('pol')[1]), return_function=return_function)
+            returned_function = self._build_polynomial(int(pdf.split('pol')[1]))
         else:
             raise ValueError(f'pdf {pdf} not recognized')
         
-        if return_function:
-            return returned_function
+        return returned_function
 
-    def _build_gaus(self, x: RooRealVar = None, return_function: bool = False):
+    def _build_gaus(self, x: RooRealVar = None):
 
         if x is None:
             x = self._x
-
-        self._pdf_params[f'gaus_{self._pdf_counter}_mean'] = RooRealVar(f'mean_{self._pdf_counter}', f'mean_{self._pdf_counter}', 0, -10, 10)
-        self._pdf_params[f'gaus_{self._pdf_counter}_sigma'] = RooRealVar(f'sigma_{self._pdf_counter}', f'sigma_{self._pdf_counter}', 1, 0.001, 10)
-        gaus = RooGaussian(f'gaus_{self._pdf_counter}', f'gaus_{self._pdf_counter}', x, self._pdf_params[f'gaus_{self._pdf_counter}_mean'], self._pdf_params[f'gaus_{self._pdf_counter}_sigma'])
-        self._pdfs[f'gaus_{self._pdf_counter}'] = gaus
+        pdf_counter = self._pdf_counter
         self._pdf_counter += 1
 
-        if return_function:
-            return gaus, self._pdf_params[f'gaus_{self._pdf_counter}_mean'], self._pdf_params[f'gaus_{self._pdf_counter}_sigma']
-        else:
-            return None
-    
-    def _build_exp_mod_gaus(self, x: RooRealVar = None, return_function: bool = False) -> tuple | None:
+        self._pdf_params[f'gaus_{pdf_counter}_mean'] = RooRealVar(f'mean_{pdf_counter}', f'mean_{pdf_counter}', 0, -10, 10)
+        self._pdf_params[f'gaus_{pdf_counter}_sigma'] = RooRealVar(f'sigma_{pdf_counter}', f'sigma_{pdf_counter}', 1, 0.001, 10)
+        gaus = RooGaussian(f'gaus_{pdf_counter}', f'gaus_{pdf_counter}', x, self._pdf_params[f'gaus_{pdf_counter}_mean'], self._pdf_params[f'gaus_{pdf_counter}_sigma'])
+        self._pdfs[f'gaus_{pdf_counter}'] = gaus
+
+        return gaus, self._pdf_params[f'gaus_{pdf_counter}_mean'], self._pdf_params[f'gaus_{pdf_counter}_sigma']
+        
+    def _build_exp_mod_gaus(self, x: RooRealVar = None) -> tuple | None:
         if x is None:
             x = self._x
-
-        self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_mean'] = RooRealVar(f'mean_{self._pdf_counter}', f'mean_{self._pdf_counter}', 0, -10, 10)
-        self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_sigma'] = RooRealVar(f'sigma_{self._pdf_counter}', f'sigma_{self._pdf_counter}', 1, 0.001, 10)
-        self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_tau'] = RooRealVar(f'tau_{self._pdf_counter}', f'tau_{self._pdf_counter}', -0.5, -10, 0)
-        exp_mod_gaus = RooGausExp(f'exp_mod_gaus_{self._pdf_counter}', f'exp_mod_gaus_{self._pdf_counter}',
-                                    x, self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_mean'], 
-                                    self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_sigma'], self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_tau'])
-        self._pdfs[f'exp_mod_gaus_{self._pdf_counter}'] = exp_mod_gaus
+        pdf_counter = self._pdf_counter
         self._pdf_counter += 1
 
-        if return_function:
-            return exp_mod_gaus, self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_mean'], self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_sigma'], self._pdf_params[f'exp_mod_gaus_{self._pdf_counter}_tau']
-        else:
-            return None
+        self._pdf_params[f'exp_mod_gaus_{pdf_counter}_mean'] = RooRealVar(f'mean_{pdf_counter}', f'mean_{pdf_counter}', 0, -10, 10)
+        self._pdf_params[f'exp_mod_gaus_{pdf_counter}_sigma'] = RooRealVar(f'sigma_{pdf_counter}', f'sigma_{pdf_counter}', 1, 0.001, 10)
+        self._pdf_params[f'exp_mod_gaus_{pdf_counter}_tau'] = RooRealVar(f'tau_{pdf_counter}', f'tau_{pdf_counter}', -0.5, -10, 0)
+        exp_mod_gaus = RooGausExp(f'exp_mod_gaus_{pdf_counter}', f'exp_mod_gaus_{pdf_counter}',
+                                    x, self._pdf_params[f'exp_mod_gaus_{pdf_counter}_mean'], 
+                                    self._pdf_params[f'exp_mod_gaus_{pdf_counter}_sigma'], self._pdf_params[f'exp_mod_gaus_{pdf_counter}_tau'])
+        self._pdfs[f'exp_mod_gaus_{pdf_counter}'] = exp_mod_gaus
 
-    def _build_exp(self, x: RooRealVar = None, return_function: bool = False, exp_offset: bool = False) -> tuple | None:
+        return exp_mod_gaus, self._pdf_params[f'exp_mod_gaus_{pdf_counter}_mean'], self._pdf_params[f'exp_mod_gaus_{pdf_counter}_sigma'], self._pdf_params[f'exp_mod_gaus_{pdf_counter}_tau']
+        
+    def _build_exp(self, x: RooRealVar = None, exp_offset: bool = False) -> tuple | None:
         
         alpha = RooRealVar(f'alpha_{self._pdf_counter}', f'alpha_{self._pdf_counter}', -0.5, -10, 0)
         offset = None
@@ -141,12 +153,9 @@ class Roofitter:
             self._pdfs[f'exp_{self._pdf_counter}'] = exp_offset
         self._pdf_counter += 1
 
-        if return_function:
-            return exp, alpha, offset
-        else:
-            return None
+        return exp, alpha, offset
         
-    def _build_comp_exp(self, x: RooRealVar = None, return_function: bool = False) -> tuple | None:
+    def _build_comp_exp(self, x: RooRealVar = None) -> tuple | None:
 
         alpha = RooRealVar(f'alpha_{self._pdf_counter}', f'alpha_{self._pdf_counter}', -0.5, -10, 0)
         offset = None
@@ -160,52 +169,58 @@ class Roofitter:
         #    self._pdfs[f'exp_{self._pdf_counter}'] = exp_offset
         self._pdf_counter += 1
 
-        if return_function:
-            return exp, alpha, offset
-        else:
-            return None
-    
-    def _build_crystal_ball(self, x: RooRealVar = None, return_function: bool = False) -> tuple | None:
+        return exp, alpha, offset
+        
+    def _build_crystal_ball(self, x: RooRealVar = None, double_sided:bool=True) -> tuple | None:
         if x is None:
             x = self._x
+            pdf_counter = self._pdf_counter
+            self._pdf_counter += 1
 
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_mean'] = RooRealVar(f'mean_{self._pdf_counter}', f'mean_{self._pdf_counter}', 0, -10, 10)
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_sigma'] = RooRealVar(f'sigma_{self._pdf_counter}', f'sigma_{self._pdf_counter}', 1, 0.001, 10)
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaL'] = RooRealVar(f'alphaL_{self._pdf_counter}', f'alphaL_{self._pdf_counter}', 1, 0, 10)
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_nL'] = RooRealVar(f'nL_{self._pdf_counter}', f'nL_{self._pdf_counter}', 1, 0, 10)
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaR'] = RooRealVar(f'alphaR_{self._pdf_counter}', f'alphaR_{self._pdf_counter}', 1, 0, 10)
-        self._pdf_params[f'crystal_ball_{self._pdf_counter}_nR'] = RooRealVar(f'nR_{self._pdf_counter}', f'nR_{self._pdf_counter}', 1, 0, 10)
+        if double_sided:
+            self._pdf_params[f'crystal_ball_{pdf_counter}_mean'] = RooRealVar(f'mean_{pdf_counter}', f'mean_{pdf_counter}', 0, -10, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'] = RooRealVar(f'sigma_{pdf_counter}', f'sigma_{pdf_counter}', 1, 0.001, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_alphaL'] = RooRealVar(f'alphaL_{pdf_counter}', f'alphaL_{pdf_counter}', 1, 0, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_nL'] = RooRealVar(f'nL_{pdf_counter}', f'nL_{pdf_counter}', 1, 0, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_alphaR'] = RooRealVar(f'alphaR_{pdf_counter}', f'alphaR_{pdf_counter}', 1, 0, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_nR'] = RooRealVar(f'nR_{pdf_counter}', f'nR_{pdf_counter}', 1, 0, 10)
 
-        crystal_ball = RooCrystalBall(f'crystal_ball_{self._pdf_counter}', f'crystal_ball_{self._pdf_counter}', x, 
-                                      self._pdf_params[f'crystal_ball_{self._pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_sigma'], 
-                                      self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaL'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_nL'], 
-                                      self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaR'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_nR'])
-        self._pdfs[f'crystal_ball_{self._pdf_counter}'] = crystal_ball
+            crystal_ball = RooCrystalBall(f'crystal_ball_{pdf_counter}', f'crystal_ball_{pdf_counter}', x, 
+                                          self._pdf_params[f'crystal_ball_{pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'], 
+                                          self._pdf_params[f'crystal_ball_{pdf_counter}_alphaL'], self._pdf_params[f'crystal_ball_{pdf_counter}_nL'], 
+                                          self._pdf_params[f'crystal_ball_{pdf_counter}_alphaR'], self._pdf_params[f'crystal_ball_{pdf_counter}_nR'])
+            self._pdfs[f'crystal_ball_{pdf_counter}'] = crystal_ball
+            return crystal_ball, self._pdf_params[f'crystal_ball_{pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'], self._pdf_params[f'crystal_ball_{pdf_counter}_alphaL'], self._pdf_params[f'crystal_ball_{pdf_counter}_nL'], self._pdf_params[f'crystal_ball_{pdf_counter}_alphaR'], self._pdf_params[f'crystal_ball_{pdf_counter}_nR']
+        
+        else: 
+            self._pdf_params[f'crystal_ball_{pdf_counter}_mean'] = RooRealVar(f'mean_{pdf_counter}', f'mean_{pdf_counter}', 0, -10, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'] = RooRealVar(f'sigma_{pdf_counter}', f'sigma_{pdf_counter}', 1, 0.001, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_alpha'] = RooRealVar(f'alpha_{pdf_counter}', f'alpha_{pdf_counter}', 1, 0, 10)
+            self._pdf_params[f'crystal_ball_{pdf_counter}_n'] = RooRealVar(f'n_{pdf_counter}', f'n_{pdf_counter}', 1, 0, 10)
+            
+            crystal_ball = RooCrystalBall(f'crystal_ball_{pdf_counter}', f'crystal_ball_{pdf_counter}', x, 
+                                          self._pdf_params[f'crystal_ball_{pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'], 
+                                          self._pdf_params[f'crystal_ball_{pdf_counter}_alpha'], self._pdf_params[f'crystal_ball_{pdf_counter}_n'], 
+                                          doubleSided=double_sided)
+            self._pdfs[f'crystal_ball_{pdf_counter}'] = crystal_ball
+            return crystal_ball, self._pdf_params[f'crystal_ball_{pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{pdf_counter}_sigma'], self._pdf_params[f'crystal_ball_{pdf_counter}_alpha'], self._pdf_params[f'crystal_ball_{pdf_counter}_n']
+        
+    def _build_polynomial(self, order: int, x: RooRealVar = None) -> tuple | None:
+        if x is None:
+            x = self._x
+        pdf_counter = self._pdf_counter
         self._pdf_counter += 1
-
-        if return_function:
-            return crystal_ball, self._pdf_params[f'crystal_ball_{self._pdf_counter}_mean'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_sigma'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaL'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_nL'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_alphaR'], self._pdf_params[f'crystal_ball_{self._pdf_counter}_nR']
-        else:
-            return None
-
-    def _build_polynomial(self, order: int, x: RooRealVar = None, return_function: bool = False) -> tuple | None:
-        if x is None:
-            x = self._x
 
         for i in range(order+1):
-            self._pdf_params[f'pol{order}_{self._pdf_counter}_coeff{i}'] = RooRealVar(f'coeff{i}_{self._pdf_counter}', f'coeff{i}_{self._pdf_counter}', 0, -10, 10)
+            self._pdf_params[f'pol{order}_{pdf_counter}_coeff{i}'] = RooRealVar(f'coeff{i}_{pdf_counter}', f'coeff{i}_{pdf_counter}', 0, -10, 10)
 
-        polynomial = RooGenericPdf(f'pol{order}_{self._pdf_counter}', f'pol{order}_{self._pdf_counter}', 
-                                   '+'.join([f'coeff{i}_{self._pdf_counter}*pow(x, {i})' for i in range(order+1)]), 
-                                   RooArgList(x, *[self._pdf_params[f'pol{order}_{self._pdf_counter}_coeff{i}'] for i in range(order+1)]))
-        self._pdfs[f'pol{order}_{self._pdf_counter}'] = polynomial
-        self._pdf_counter += 1
+        polynomial = RooGenericPdf(f'pol{order}_{pdf_counter}', f'pol{order}_{pdf_counter}', 
+                                   '+'.join([f'coeff{i}_{pdf_counter}*pow(x, {i})' for i in range(order+1)]), 
+                                   RooArgList(x, *[self._pdf_params[f'pol{order}_{pdf_counter}_coeff{i}'] for i in range(order+1)]))
+        self._pdfs[f'pol{order}_{pdf_counter}'] = polynomial
 
-        if return_function:
-            return polynomial, *[self._pdf_params[f'pol_{order}_{self._pdf_counter}_coeff{i}'] for i in range(order+1)]
-        else:
-            return None
-
+        return polynomial, *[self._pdf_params[f'pol_{order}_{pdf_counter}_coeff{i}'] for i in range(order+1)]
+        
     def init_gaus(self, hist: TH1F, func_name: str, xmin: float = None, xmax: float = None) -> None:
         '''
             Initialise the parameters of a Gaussian function from a histogram

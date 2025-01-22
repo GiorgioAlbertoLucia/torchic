@@ -219,7 +219,7 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     else:
         simil_bethe_bloch_func.FixParameter(4, simil_bethe_bloch_pars['kp4'])
         simil_bethe_bloch_func.SetParLimits(0, 0., 10.)
-        simil_bethe_bloch_func.SetParLimits(1, 0., 5.)
+        simil_bethe_bloch_func.SetParLimits(1, 0., 10.)
 
     simil_bethe_bloch_func.SetParNames(*simil_bethe_bloch_pars.keys())
     graph_mean.Fit(simil_bethe_bloch_func, 'RMS+')

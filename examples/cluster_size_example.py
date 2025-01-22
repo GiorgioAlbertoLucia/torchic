@@ -9,6 +9,8 @@ from torchic.core.dataset import Dataset
 from torchic.core.histogram import AxisSpec
 from torchic.core.roofitter import Roofitter
 
+PR_MASS = 0.93827   # proton mass in GeV/c^2
+
 def cluster_size_calibration_example_proton(output_file: TFile):
     '''
         The following function performs a ITS calibration (of protons) with a simil-Bethe-Bloch formula.
@@ -42,7 +44,7 @@ def cluster_size_calibration_example_proton(output_file: TFile):
     dataset['fITSAvgClSize'], __ = average_cluster_size(dataset['fItsClusterSizePr'])
     dataset['fITSClSizeCosLam'] = dataset['fITSAvgClSize'] / np.cosh(dataset['fEtaPr'])
 
-    dataset['fBetaGamma'] = dataset['fInnerParamTPCPr'] / 0.93827
+    dataset['fBetaGamma'] = dataset['fInnerParamTPCPr'] / PR_MASS
 
     cluster_size_dir = output_file.mkdir('ClusterSizeCalibration')
 
@@ -53,7 +55,7 @@ def cluster_size_calibration_example_proton(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     cl_options = {'first_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(0.5),
                   'last_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(2.7),
@@ -90,8 +92,8 @@ def cluster_size_calibration_example_proton(output_file: TFile):
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fResolutionITS'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fResolutionITS']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fInnerParamTPCPr', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fInnerParamTPCPr', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
     
     # draw results
     cluster_size_dir.cd()
@@ -120,7 +122,8 @@ def cluster_size_calibration_example_proton_pid(output_file: TFile):
     dataset['fITSAvgClSize'], __ = average_cluster_size(dataset['fItsClusterSize'])
     dataset['fITSClSizeCosLam'] = dataset['fITSAvgClSize'] / np.cosh(dataset['fEta'])
 
-    dataset['fBetaGamma'] = np.abs(dataset['fP']) / 0.93827
+    
+    dataset['fBetaGamma'] = np.abs(dataset['fP']) / PR_MASS
 
     cluster_size_dir = output_file.mkdir('ClusterSizeCalibrationPid')
 
@@ -131,7 +134,7 @@ def cluster_size_calibration_example_proton_pid(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     cl_options = {'first_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(0.5),
                   'last_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(2.7),
@@ -143,14 +146,25 @@ def cluster_size_calibration_example_proton_pid(output_file: TFile):
                                              'charge': 1.,
                                              'kp4': 1.,
                                             },
-                  'signal_func_name': 'exp_mod_gaus_0',
+                  'signal_func_name': 'crystal_ball_0',
+                  #'signal_func_name': 'exp_mod_gaus_0',
     }
 
-    x = RooRealVar('x', 'x', 1., 9.5)
-    fitter = Roofitter(x, ['exp_mod_gaus'])
-    fitter.init_param('exp_mod_gaus_0_mean', 5., 2., 6.)
-    fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0., 10.)
-    fitter.init_param('exp_mod_gaus_0_tau', 1., -10., 10.)    
+    x = RooRealVar('x', 'x', 0., 15.)
+    #fitter = Roofitter(x, ['exp_mod_gaus'])
+    #fitter.init_param('exp_mod_gaus_0_mean', 5., 2., 6.)
+    #fitter.init_param('exp_mod_gaus_0_sigma', 0.5, 0., 10.)
+    #fitter.init_param('exp_mod_gaus_0_tau', 1., -10., 10.)
+    fitter = Roofitter(x)
+    # signal
+    fitter.build_pdf('crystal_ball', double_sided=False)
+    fitter.init_param('crystal_ball_0_mean', 5., 0., 15.)
+    fitter.init_param('crystal_ball_0_sigma', 0.5, 0., 2.)
+    fitter.init_param('crystal_ball_0_alpha', 1., -10., 0.)
+    fitter.init_param('crystal_ball_0_n', 1., 0., 30.)
+    # bkg
+    fitter.build_pdf('exp', exp_offset=False)
+    fitter.init_param('exp_1_alpha', -0.1, -1., 1.)
     cluster_size_pars, its_resolution_pars = cluster_size_calibration(h2_clsize, cluster_size_dir, fitter, **cl_options)
 
     simil_bethe_bloch_func = TF1('f_SimilBetheBloch', '([0]/x^[1] + [2]) * [3]^[4]', 0.3, 4.) # function used in cluster_size_calibration
@@ -169,8 +183,8 @@ def cluster_size_calibration_example_proton_pid(output_file: TFile):
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fResolutionITS'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fResolutionITS']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
     
     # draw results
     cluster_size_dir.cd()
@@ -200,7 +214,7 @@ def cluster_size_calibration_example_proton_pid_mc(output_file: TFile):
     dataset['fITSAvgClSize'], __ = average_cluster_size(dataset['fItsClusterSize'])
     dataset['fITSClSizeCosLam'] = dataset['fITSAvgClSize'] / np.cosh(dataset['fEta'])
 
-    dataset['fBetaGamma'] = np.abs(dataset['fP']) / 0.93827
+    dataset['fBetaGamma'] = np.abs(dataset['fP']) / PR_MASS
 
     cluster_size_dir = output_file.mkdir('ClusterSizeCalibrationPidMC')
 
@@ -211,7 +225,7 @@ def cluster_size_calibration_example_proton_pid_mc(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     cl_options = {'first_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(0.5),
                   'last_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(2.7),
@@ -249,8 +263,8 @@ def cluster_size_calibration_example_proton_pid_mc(output_file: TFile):
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fResolutionITS'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fResolutionITS']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
     
     # draw results
     cluster_size_dir.cd()
@@ -289,7 +303,7 @@ def cluster_size_cut_example(output_file: TFile):
     dataset['fITSAvgClSize'], __ = average_cluster_size(dataset['fItsClusterSizePr'])
     dataset['fITSClSizeCosLam'] = dataset['fITSAvgClSize'] / np.cosh(dataset['fEtaPr'])
 
-    dataset['fBetaGamma'] = dataset['fInnerParamTPCPr'] / 0.93827
+    dataset['fBetaGamma'] = dataset['fInnerParamTPCPr'] / PR_MASS
 
     cluster_size_dir = output_file.mkdir('ClusterSizeCut')
 
@@ -300,7 +314,7 @@ def cluster_size_cut_example(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize_before_cut = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize_before_cut = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
 
     cluster_size_pars = {
         'kp1': 0.903,
@@ -326,11 +340,11 @@ def cluster_size_cut_example(output_file: TFile):
     its_resolution = 0.2
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (its_resolution*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fInnerParamTPCPr', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fInnerParamTPCPr', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
 
     dataset.query('fNSigmaITS > -1.5', inplace=True)
-    h2_clsize_after_cut = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize_after_cut = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     # draw results
     cluster_size_dir.cd()
@@ -375,7 +389,7 @@ def cluster_size_calibration_example_he(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     cl_options = {'first_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(0.5),
                   'last_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(2.7),
@@ -413,8 +427,8 @@ def cluster_size_calibration_example_he(output_file: TFile):
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fResolutionITS'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fResolutionITS']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fInnerParamTPCHe3', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fInnerParamTPCHe3', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
     
     # draw results
     cluster_size_dir.cd()
@@ -462,7 +476,7 @@ def cluster_size_calibration_example_he_free(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h2_clsize = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
     
     cl_options = {'first_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(0.5),
                   'last_bin_fit_by_slices': h2_clsize.GetXaxis().FindBin(2.7),
@@ -500,8 +514,8 @@ def cluster_size_calibration_example_he_free(output_file: TFile):
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fResolutionITS'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fResolutionITS']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fPHe3', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fPHe3', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
     
     # draw results
     cluster_size_dir.cd()
@@ -541,8 +555,8 @@ def cluster_size_cut_example_he(output_file: TFile):
     axis_spec_cl_exp = AxisSpec(62, -0.5, 15.5, 'h2_ExpItsClusterSize', ';#beta#gamma; #LT ITS cluster size #GT #times #LT cos#lambda #GT')
 
     # cluster size calibration
-    h2_clsize_before_cut = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
-    h_nsigma_tpc_before_cut = dataset.build_hist('fTpcNSigma', axis_spec_nsigma_tpc)
+    h2_clsize_before_cut = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h_nsigma_tpc_before_cut = dataset.build_th2('fTpcNSigma', axis_spec_nsigma_tpc)
     h_nsigma_tpc_before_cut.SetName('h_nSigmaTPC_before_cut')
 
     cluster_size_pars = {
@@ -575,12 +589,12 @@ def cluster_size_cut_example_he(output_file: TFile):
     dataset['fITSResolution'] = np_cluster_size_resolution(dataset['fBetaGamma'], *its_resolution_pars.values())
     dataset['fExpClSizeCosLam'] = cluster_size_parametrisation(dataset['fBetaGamma'], *cluster_size_pars.values())
     dataset['fNSigmaITS'] = (dataset['fITSClSizeCosLam'] - dataset['fExpClSizeCosLam']) / (dataset['fITSResolution']*dataset['fExpClSizeCosLam'])
-    h2_clsize_exp = dataset.build_hist('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
-    h2_nsigma_its = dataset.build_hist('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
+    h2_clsize_exp = dataset.build_th2('fBetaGamma', 'fExpClSizeCosLam', axis_spec_bg, axis_spec_cl_exp)
+    h2_nsigma_its = dataset.build_th2('fP', 'fNSigmaITS', axis_spec_p, axis_spec_nsigma_its)
 
     dataset.query('fNSigmaITS > -1.5', inplace=True)
-    h2_clsize_after_cut = dataset.build_hist('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
-    h_nsigma_tpc_after_cut = dataset.build_hist('fTpcNSigma', axis_spec_nsigma_tpc)
+    h2_clsize_after_cut = dataset.build_th2('fBetaGamma', 'fITSClSizeCosLam', axis_spec_bg, axis_spec_cl)
+    h_nsigma_tpc_after_cut = dataset.build_th2('fTpcNSigma', axis_spec_nsigma_tpc)
     
     # draw results
     cluster_size_dir.cd()
