@@ -3,7 +3,8 @@ import numpy as np
 from math import erf
 import pandas as pd
 from copy import deepcopy
-from ROOT import TH2F, TGraphErrors, TDirectory, TF1, gInterpreter, TCanvas
+from ROOT import TH2F, TGraphErrors, TDirectory, TF1, gInterpreter, TCanvas, TPaveText
+from ROOT import RooDataHist, RooArgList, RooRealVar, RooFit
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 BETHEBLOCH_DIR = os.path.join(CURRENT_DIR, 'BetheBloch.hh')
@@ -44,7 +45,7 @@ def cluster_size_resolution(betagamma, rp0, rp1, rp2):
     return rp0 * erf((betagamma - rp1) / rp2)
 np_cluster_size_resolution = np.vectorize(cluster_size_resolution)
 
-def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, **kwargs) -> dict:
+def bethe_bloch_calibration(x: RooRealVar, h2: TH2F, output_file: TDirectory, fit_func, fit_params, **kwargs) -> dict:
     '''
         Perform a Bethe-Bloch calibration on a 2D histogram.
         The histogram is sliced along the x-axis and fitted with a Gaussian.
@@ -75,26 +76,45 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter
     '''
 
     fit_results = pd.DataFrame()
+    first_fit_bin = kwargs.get('first_bin_fit_by_slices')
     for xbin in range(kwargs.get('first_bin_fit_by_slices'), kwargs.get('last_bin_fit_by_slices')+1):
         h = h2.ProjectionY(f'h_{xbin}', xbin, xbin, 'e')
-        xvalue = h2.GetXaxis().GetBinCenter(xbin)
-        funcs_to_fit = kwargs.get('funcs_to_fit', list(fitter.pdfs.keys()))
+        bin_center = h2.GetXaxis().GetBinCenter(xbin)
+            
+        datahist =  RooDataHist('data', 'data', RooArgList(x), h)
 
-        fitter.init_gaus(h, kwargs.get('signal_func_name', 'gaus'), *kwargs.get('signal_range', (h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax())))
-        fractions = fitter.fit(h, h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax(), funcs_to_fit=funcs_to_fit)
-        if 'output_dir' in kwargs:
-            kwargs['output_dir'].cd()
-            fitter.plot(kwargs['output_dir'], canvas_name=f'c_{h.GetName()}', funcs_to_plot=funcs_to_fit)
+        fit_ranges = kwargs.get('fit_ranges', None)
+        if fit_ranges is not None:
+            fit_range = fit_ranges[xbin-first_fit_bin]
+            fit_func.fitTo(datahist, RooFit.Save(), RooFit.Range(fit_range[0], fit_range[1]))
+        else:
+            fit_func.fitTo(datahist, RooFit.Save())
 
-        bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
-        bin_fit_results['bin_center'] = xvalue
-        bin_fit_results['unnorm_integral'] = bin_fit_results['integral'] * h.Integral()
+        frame = x.frame()
+        datahist.plotOn(frame)
+        fit_func.plotOn(frame)
+
+        ## put fit parameters on the plot
+        text = TPaveText(0.7, 0.7, 0.9, 0.9, 'NDC')
+        for name, param in fit_params.items():
+            text.AddText(f'{name} = {param.getVal():.4f} +/- {param.getError():.4f}')
+        frame.addObject(text)
+        frame.Draw()
+        output_file.cd()
+        frame.Write(f'frame_{xbin}')
+
+        bin_fit_results = pd.DataFrame.from_dict({key: [value.getVal()] for key, value in fit_params.items()})
+        bin_fit_results_error = pd.DataFrame.from_dict({key+'_err': [value.getError()] for key, value in fit_params.items()})
+        bin_fit_results['bin_center'] = bin_center
+        bin_fit_results['integral'] = fit_func.createIntegral(RooArgList(x)).getVal()
+        bin_fit_results['unnorm_integral'] = fit_func.createIntegral(RooArgList(x)).getVal() * h.Integral()
+        bin_fit_results = pd.concat([bin_fit_results, bin_fit_results_error], axis=1)
         fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
 
-    signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
+    signal_func_name = kwargs.get('signal_func_name', 'gaus')
     fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['unnorm_integral'])
     fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
     fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
@@ -134,7 +154,7 @@ def bethe_bloch_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter
 
     return bethe_bloch_pars
 
-def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitter, charge: float = 1., fit_charge: bool = False, **kwargs) -> dict:
+def cluster_size_calibration(clsize: RooRealVar, h2: TH2F, output_file: TDirectory, fit_func, fit_params, fit_mc: bool = False, **kwargs) -> dict:
     '''
         Perform a calibration fit on a 2D histogram.
         The histogram is sliced along the x-axis and fitted with a double Gaussian.
@@ -156,6 +176,8 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
         - fit_charge: bool
             If True, the charge exponent will be fit, while the other parameters will be fixed.
             If False, the charge exponent will be fixed, while the other parameters will be fit.
+        - fit_mc: bool
+            If True, only the constant paramter will be left free.
         - **kwargs:
             Additional arguments to be passed to the fit_by_slices function.
             -> first_bin_fit_by_slices: int
@@ -174,26 +196,45 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     '''
 
     fit_results = pd.DataFrame()
+    first_fit_bin = kwargs.get('first_bin_fit_by_slices')
     for xbin in range(kwargs.get('first_bin_fit_by_slices'), kwargs.get('last_bin_fit_by_slices')+1):
         h = h2.ProjectionY(f'h_{xbin}', xbin, xbin, 'e')
-        xvalue = h2.GetXaxis().GetBinCenter(xbin)
-        funcs_to_fit = kwargs.get('funcs_to_fit', list(fitter.pdfs.keys()))
-        fitter.init_gaus(h, kwargs.get('signal_func_name', 'gaus'), *kwargs.get('signal_range', (h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax())))
+        bin_center = h2.GetXaxis().GetBinCenter(xbin)
+            
+        datahist =  RooDataHist('data', 'data', RooArgList(clsize), h)
 
-        fractions = fitter.fit(h, h.GetXaxis().GetXmin(), h.GetXaxis().GetXmax(), funcs_to_fit=funcs_to_fit)
-        if 'output_dir' in kwargs:
-            kwargs['output_dir'].cd()
-            fitter.plot(kwargs['output_dir'], canvas_name=f'c_{h.GetName()}', funcs_to_plot=funcs_to_fit)
+        fit_ranges = kwargs.get('fit_ranges', None)
+        if fit_ranges is not None:
+            fit_range = fit_ranges[xbin-first_fit_bin]
+            fit_func.fitTo(datahist, RooFit.Save(), RooFit.Range(fit_range[0], fit_range[1]))
+        else:
+            fit_func.fitTo(datahist, RooFit.Save())
 
-        bin_fit_results = pd.DataFrame.from_dict({key: [value] for key, value in fitter.fit_results.items()})
-        bin_fit_results['bin_center'] = xvalue
-        bin_fit_results['unnorm_integral'] = bin_fit_results['integral'] * h.Integral()
+        frame = clsize.frame()
+        datahist.plotOn(frame)
+        fit_func.plotOn(frame)
+
+        ## put fit parameters on the plot
+        text = TPaveText(0.7, 0.7, 0.9, 0.9, 'NDC')
+        for name, param in fit_params.items():
+            text.AddText(f'{name} = {param.getVal():.4f} +/- {param.getError():.4f}')
+        frame.addObject(text)
+        frame.Draw()
+        output_file.cd()
+        frame.Write(f'frame_{xbin}')
+
+        bin_fit_results = pd.DataFrame.from_dict({key: [value.getVal()] for key, value in fit_params.items()})
+        bin_fit_results_error = pd.DataFrame.from_dict({key+'_err': [value.getError()] for key, value in fit_params.items()})
+        bin_fit_results['bin_center'] = bin_center
+        bin_fit_results['integral'] = fit_func.createIntegral(RooArgList(clsize)).getVal()
+        bin_fit_results['unnorm_integral'] = fit_func.createIntegral(RooArgList(clsize)).getVal() * h.Integral()
+        bin_fit_results = pd.concat([bin_fit_results, bin_fit_results_error], axis=1)
         fit_results = pd.concat([fit_results, bin_fit_results], ignore_index=True)
 
     bin_error = (fit_results['bin_center'][1] - fit_results['bin_center'][0])/2.
     fit_results['bin_error'] = bin_error
 
-    signal_func_name = kwargs.get('signal_func_name', 'gaus_1')
+    signal_func_name = kwargs.get('signal_func_name', 'gaus')
     fit_results['mean_err'] = fit_results[f'{signal_func_name}_sigma'] / np.sqrt(fit_results['unnorm_integral'])
     fit_results['res'] = fit_results[f'{signal_func_name}_sigma'] / fit_results[f'{signal_func_name}_mean']
     fit_results['res_err'] = np.sqrt((fit_results[f'{signal_func_name}_sigma_err']/fit_results[f'{signal_func_name}_mean'])**2 + (fit_results[f'{signal_func_name}_sigma']*fit_results['mean_err']/fit_results[f'{signal_func_name}_mean']**2)**2)
@@ -205,19 +246,16 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
     xmin = h2.GetXaxis().GetBinLowEdge(kwargs.get('first_bin_fit_by_slices'))
     xmax = h2.GetXaxis().GetBinUpEdge(kwargs.get('last_bin_fit_by_slices'))
     
-    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '([0]/x^[1] + [2]) * [3]^[4]', xmin, xmax)
-    DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5, 'charge': charge, 'kp4': 2.}
+    simil_bethe_bloch_func = TF1('simil_bethe_bloch_func', '[0]/x^[1] + [2]', xmin, xmax)
+    DEFAULT_PARAMS = {'kp1': 2.6, 'kp2': 2., 'kp3': 5.5}
     simil_bethe_bloch_pars = kwargs.get('simil_bethe_bloch_pars', deepcopy(DEFAULT_PARAMS))
     simil_bethe_bloch_func.SetParameters(*simil_bethe_bloch_pars.values())
-    simil_bethe_bloch_func.FixParameter(3, charge)
 
-    if fit_charge:
+    if fit_mc:
         simil_bethe_bloch_func.FixParameter(0, simil_bethe_bloch_pars['kp1'])
         simil_bethe_bloch_func.FixParameter(1, simil_bethe_bloch_pars['kp2'])
-        simil_bethe_bloch_func.FixParameter(2, simil_bethe_bloch_pars['kp3'])
-        simil_bethe_bloch_func.SetParLimits(4, 0., 5.)
+        simil_bethe_bloch_func.SetParameter(2, simil_bethe_bloch_pars['kp3'])
     else:
-        simil_bethe_bloch_func.FixParameter(4, simil_bethe_bloch_pars['kp4'])
         simil_bethe_bloch_func.SetParLimits(0, 0., 10.)
         simil_bethe_bloch_func.SetParLimits(1, 0., 10.)
 
@@ -236,10 +274,7 @@ def cluster_size_calibration(h2: TH2F, output_file: TDirectory, fitter: Roofitte
 
     print(tc.GREEN+'[INFO]:'+tc.RESET+'-------- BETHE BLOCH PARAMETRISATION --------')
     for ipar, par in enumerate(simil_bethe_bloch_pars.keys()):
-        if fit_charge and (par == 'charge' or par == 'kp4'):
-            simil_bethe_bloch_pars[par] = simil_bethe_bloch_func.GetParameter(ipar)
-        elif not fit_charge and par != 'charge' and par != 'kp4':
-            simil_bethe_bloch_pars[par] = simil_bethe_bloch_func.GetParameter(par)
+        simil_bethe_bloch_pars[par] = simil_bethe_bloch_func.GetParameter(ipar)
         print(tc.GREEN+'[INFO]:'+tc.RED+f'{par}:'+tc.RESET, simil_bethe_bloch_pars[par])
     print(tc.GREEN+'[INFO]:'+tc.RED+f'\tchi2 / NDF:'+tc.RESET, simil_bethe_bloch_func.GetChisquare(), '/', simil_bethe_bloch_func.GetNDF())
     
