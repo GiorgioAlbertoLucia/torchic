@@ -219,7 +219,7 @@ class Roofitter:
                                    RooArgList(x, *[self._pdf_params[f'pol{order}_{pdf_counter}_coeff{i}'] for i in range(order+1)]))
         self._pdfs[f'pol{order}_{pdf_counter}'] = polynomial
 
-        return polynomial, *[self._pdf_params[f'pol_{order}_{pdf_counter}_coeff{i}'] for i in range(order+1)]
+        return polynomial, *[self._pdf_params[f'pol{order}_{pdf_counter}_coeff{i}'] for i in range(order+1)]
         
     def init_gaus(self, hist: TH1F, func_name: str, xmin: float = None, xmax: float = None) -> None:
         '''
