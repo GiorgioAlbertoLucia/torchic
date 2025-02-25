@@ -51,10 +51,10 @@ class Plotter:
             pad2.SetTopMargin(kwargs.get('pad2_top_margin', 0.25))
             pad2.SetBottomMargin(kwargs.get('pad2_bottom_margin', 0.25))
             self._canvas.cd()
-            pad1.Draw()
-            pad2.Draw()
             self._pads.append(pad1)
             self._pads.append(pad2)
+            self._pads[0].Draw()
+            self._pads[1].Draw()
 
     def create_multigraph(self, axis_specs: list, **kwargs):
 
@@ -225,7 +225,7 @@ class Plotter:
         pad_to_draw.cd()
         self.line_dict[line_specs['name']].Draw(kwargs.get('draw_option', 'SAME'))
 
-    def create_legends(self, position, **kwargs):
+    def create_legend(self, position, **kwargs):
         ''' 
             position: list
                 x1, y1, x2, y2: float
@@ -235,6 +235,9 @@ class Plotter:
                 fill_color: int
                 fill_style: int
         '''
+        if not kwargs.get('bool', True):
+            self.legends.append(None)
+            return 
         
         legend = TLegend(position[0], position[1], position[2], position[3])
         legend.SetHeader(kwargs.get('header', ''))
@@ -249,15 +252,17 @@ class Plotter:
 
         self.legends.append(legend)
     
-    def draw_legends(self, **kwargs):
+    def draw_legend(self):
 
         if self._n_pads < 2:
             self._canvas.cd()
-            self.legends[0].Draw(kwargs.get('draw_option', 'SAME'))
+            if self.legends[0] is not None:
+                self.legends[0].Draw('same')
         else:
-            for ipad in self._n_pads:
+            for ipad in range(self._n_pads):
                 self._pads[ipad].cd()
-                self.legends[ipad].Draw(kwargs.get('draw_option', 'SAME'))
+                if self.legends[ipad] is not None:
+                    self.legends[ipad].Draw('same')
 
     def _reset(self):
         self.hist_dict = {}
