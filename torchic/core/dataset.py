@@ -98,15 +98,21 @@ class Dataset:
 
             else:
                 file_folders = uproot.open(file).keys()
-                tree_path_list = []
-                for folder in file_folders:
-                    if folder_name[:-1] in folder and tree_name in folder:
-                        tree_path_list.append(folder)
+                # delete duplicate trees, keeping only the last iteration. Remove the tree_name from the folder_name, it will be appended later
+                file_folders = [folder for folder in file_folders if "/" not in folder]
+                file_folders.sort(reverse=True)
+                file_folders_to_remove = []
+                for ifolder, folder in enumerate(file_folders[1:]):
+                    obj_nocycle = folder.split(';')[0]
+                    if obj_nocycle in file_folders[ifolder]:
+                        file_folders_to_remove.append(folder)
+                for folder in file_folders_to_remove:
+                    file_folders.remove(folder)
 
                 tmp_data = pd.DataFrame()
-                for tree_path in tree_path_list:
-                    print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_path}'+tc.RESET)
-                    tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{tree_path}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
+                for folder in file_folders:
+                    print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{folder}/{tree_name}'+tc.RESET)
+                    tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{folder}/{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
                 init_data = pd.concat([init_data, tmp_data], ignore_index=True, copy=False)
 
         return cls(init_data, **kwargs)
