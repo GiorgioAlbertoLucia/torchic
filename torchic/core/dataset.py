@@ -107,13 +107,13 @@ class Dataset:
                     obj_nocycle = folder.split(';')[0]
                     if obj_nocycle in file_folders[ifolder]:
                         file_folders_to_remove.append(folder)
-                    elif folder_name not in obj_nocycle:
-                        file_folders_to_remove.append(folder)
                 for folder in file_folders_to_remove:
                     file_folders.remove(folder)
 
                 tmp_data = pd.DataFrame()
                 for folder in file_folders:
+                    if folder_name[:-1] not in folder:
+                        continue
                     print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{folder}/{tree_name}'+tc.RESET)
                     tmp_data = pd.concat([tmp_data, uproot.open(f'{file}:{folder}/{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)], ignore_index=True, copy=False)
                 init_data = pd.concat([init_data, tmp_data], ignore_index=True, copy=False)
