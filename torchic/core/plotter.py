@@ -2,7 +2,7 @@
     Class to produce plots from given THn
 '''
 
-from ROOT import TCanvas, TFile, TLine, TBox, TLegend, TMultiGraph, TPad
+from ROOT import TCanvas, TFile, TLine, TBox, TLegend, TMultiGraph, TPad, TText
 from ROOT import gStyle
 
 class Plotter:
@@ -16,6 +16,7 @@ class Plotter:
 
         self._hframe = None
         self.legends = []
+        self.texts = []
         self.multigraph = None
         
         self.hist_dict = {}
@@ -263,6 +264,30 @@ class Plotter:
                 self._pads[ipad].cd()
                 if self.legends[ipad] is not None:
                     self.legends[ipad].Draw('same')
+
+    def add_text(self, text:str, position: list, **kwargs):
+        '''
+            Add text to the plot
+            
+            text: str
+            position: list
+                x1, y1, x2, y2: float
+            kwargs: dict
+                text_size: float
+                text_align: int
+        '''
+        if not kwargs.get('bool', True):
+            self.texts.append(None)
+            return
+        
+        text = TText(position[0], position[1], text)
+        text.SetTextSize(kwargs.get('text_size', 0.03))
+        text.SetTextAlign(kwargs.get('text_align', 11))
+        ipad = kwargs.get('draw_pad', 0)
+        if self._n_pads > 1: self._pads[ipad].cd()
+        else: self._canvas.cd()
+        text.Draw()
+        self.texts.append(text)
 
     def _reset(self):
         self.hist_dict = {}
