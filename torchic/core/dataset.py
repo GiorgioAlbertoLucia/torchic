@@ -88,6 +88,7 @@ class Dataset:
                 print(tc.RED+'[ERROR]: '+tc.RESET+'tree_name must be specified when using a .root file.')
 
             elif folder_name is None:
+                print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+f'{file}:{tree_name}'+tc.RESET)
                 data =  uproot.open(f'{file}:{tree_name}').arrays(filter_name=columns, library='pd', **uproot_kwargs)
                 init_data = pd.concat([init_data, data], ignore_index=True, copy=False)
 
@@ -105,6 +106,8 @@ class Dataset:
                 for ifolder, folder in enumerate(file_folders[1:]):
                     obj_nocycle = folder.split(';')[0]
                     if obj_nocycle in file_folders[ifolder]:
+                        file_folders_to_remove.append(folder)
+                    elif folder_name not in obj_nocycle:
                         file_folders_to_remove.append(folder)
                 for folder in file_folders_to_remove:
                     file_folders.remove(folder)
@@ -261,47 +264,3 @@ class Dataset:
             return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
         else:
             return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
-
-
-    # Deprecated
-    #@overload
-    #@signature('str', 'AxisSpec')  
-    #def build_hist(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
-    #    '''
-    #        Build a histogram with one axis
-#
-    #        Args:
-    #            column (str): The column to be histogrammed
-    #            axis_spec_x (AxisSpec): The specification for the x-axis
-#
-    #        Returns:
-    #            TH1F: The histogram
-    #    '''
-    #    subset = kwargs.get('subset', None)
-    #    if subset:
-    #        return build_TH1(self._subsets[subset][column], axis_spec_x)
-    #    else:
-    #        return build_TH1(self._data[column], axis_spec_x)
-    #
-    #@build_hist.overload
-    #@signature('str', 'str', 'AxisSpec', 'AxisSpec')
-    #def build_hist(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
-    #    '''
-    #        Build a histogram with two axes
-#
-    #        Args:
-    #            column_x (str): The column to be histogrammed on the x-axis
-    #            column_y (str): The column to be histogrammed on the y-axis
-    #            axis_spec_x (AxisSpec): The specification for the x-axis
-    #            axis_spec_y (AxisSpec): The specification for the y-axis
-#
-    #        Returns:
-    #            TH2F: The histogram
-    #    '''
-    #    subset = kwargs.get('subset', None)
-    #    if subset:
-    #        return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
-    #    else:
-    #        return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
-    
-    
