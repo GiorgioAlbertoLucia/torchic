@@ -4,6 +4,7 @@
 
 from dataclasses import dataclass
 from ROOT import TH1F, TH2F, TFile
+import boost_histogram as bh
 from torchic.utils.overload import overload, signature
 
 import numpy as np
@@ -84,6 +85,36 @@ def fill_TH2(data_x, data_y, hist: TH2F):
     '''
     for x, y in zip(data_x, data_y):
         hist.Fill(x, y)
+
+def build_boost1(data, axis_spec_x: AxisSpec) -> bh.Histogram:
+    '''
+        Build a histogram with one axis
+
+        Args:
+            data (pd.Series): The data to be histogrammed
+            axis_spec_x (AxisSpec): The specification for the x-axis
+
+        Returns:
+            TH1F: The histogram
+    '''
+
+    hist = bh.Histogram(
+        bh.axis.Regular(axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax,
+                        metadata=axis_spec_x.title)
+    )
+    hist.fill(data)
+    return hist
+
+def build_boost2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> bh.Histogram:
+
+    hist = bh.Histogram(
+        bh.axis.Regular(axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax,
+                        metadata=axis_spec_x.title),
+        bh.axis.Regular(axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax,
+                        metadata=axis_spec_y.title)
+    )
+    hist.fill(data_x, data_y)
+    return hist
 
 @overload
 @signature('HistLoadInfo')

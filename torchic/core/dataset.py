@@ -1,8 +1,9 @@
 import pandas as pd
 import uproot
+import boost_histogram as bh
 from ROOT import TH1F, TH2F
 
-from torchic.core.histogram import AxisSpec, build_TH1, build_TH2
+from torchic.core.histogram import AxisSpec, build_TH1, build_TH2, build_boost1, build_boost2
 from torchic.utils.overload import overload, signature
 from torchic.utils.terminal_colors import TerminalColors as tc
 
@@ -264,3 +265,37 @@ class Dataset:
             return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
         else:
             return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+
+    def build_boost1d(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> bh.Histogram:
+        '''
+            Build a histogram with one axis
+    
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+    
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_boost1(self._subsets[subset][column], axis_spec_x)
+        else:
+            return build_boost1(self._data[column], axis_spec_x)
+        
+    def build_boost2d(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> bh.Histogram:
+        '''
+            Build a histogram with one axis
+    
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+    
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_boost2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+        else:
+            return build_boost2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
