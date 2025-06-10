@@ -5,7 +5,9 @@
 
 **Tools for Optimized Research in Computational HIgh-energy physiCs**
 
-![Torchic Logo](images/torchic-logo.webp)
+<div style="text-align: center;">
+  <img src="images/torchic-logo.webp" alt="Torchic Logo" width="300" />
+</div>
 
 `torchic` is a Python package designed to support researchers in computational high-energy physics with optimized tools and utilities.
 
