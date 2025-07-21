@@ -1,10 +1,10 @@
 import numpy as np
 from ROOT import TFile, TF1, TCanvas, RooRealVar
 
-from torchic.physics.calibration import bethe_bloch_calibration, py_BetheBloch, cluster_size_parametrisation, cluster_size_calibration
+from deprecated.torchic.physics.calibration import bethe_bloch_calibration, py_BetheBloch, cluster_size_parametrisation, cluster_size_calibration
 from torchic.physics.ITS import average_cluster_size
 from torchic import Dataset, AxisSpec
-from torchic.core.roofitter import Roofitter
+from deprecated.torchic.core.roofitter import Roofitter
 
 def getSign(flags):
     if flags & 256:

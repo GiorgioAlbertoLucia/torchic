@@ -3,11 +3,11 @@ from math import erf
 from ROOT import TFile, TF1, TCanvas
 from ROOT import RooRealVar
 
-from torchic.physics.calibration import cluster_size_parametrisation, np_cluster_size_resolution, cluster_size_calibration
+from deprecated.torchic.physics.calibration import cluster_size_parametrisation, np_cluster_size_resolution, cluster_size_calibration
 from torchic.physics.ITS import average_cluster_size
 from torchic.core.dataset import Dataset
 from torchic.core.histogram import AxisSpec
-from torchic.core.roofitter import Roofitter
+from deprecated.torchic.core.roofitter import Roofitter
 
 PR_MASS = 0.93827   # proton mass in GeV/c^2
 

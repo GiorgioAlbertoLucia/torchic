@@ -4,7 +4,7 @@ from ROOT import TFile, TF1, TCanvas, TGraphErrors
 from ROOT import RooRealVar
 
 from torchic.core.histogram import AxisSpec, HistLoadInfo, load_hist
-from torchic.core.roofitter import Roofitter
+from deprecated.torchic.core.roofitter import Roofitter
 
 def purity_lambda(output_file: TFile):
     '''

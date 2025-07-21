@@ -2,7 +2,7 @@ import numpy as np
 from ROOT import TH2F, RooRealVar, TFile, TGraphErrors, TGraph
 from torchic import HistLoadInfo
 from torchic import histogram
-from torchic.core.roofitter import Roofitter
+from deprecated.torchic.core.roofitter import Roofitter
 
 def purity_proton_TPC(output_file: TFile):
 
