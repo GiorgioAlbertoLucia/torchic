@@ -8,10 +8,6 @@ from torchic.core.histogram import (
     HistLoadInfo
 )
 
-from torchic.core.roofitter import (
-    Roofitter
-)
-
 from torchic.core.plotter import (
     Plotter
 )
@@ -21,6 +17,5 @@ __all__ = [
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
-    'Roofitter',
     'Plotter'
 ]
