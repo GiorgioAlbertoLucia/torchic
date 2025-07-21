@@ -4,7 +4,7 @@ from ROOT import TDirectory, TFile
 from torchic.core.dataset import Dataset
 from torchic.core.histogram import AxisSpec
 from torchic.physics.ITS import average_cluster_size
-from torchic.physics.calibration import bethe_bloch_calibration
+from deprecated.torchic.physics.calibration import bethe_bloch_calibration
 
 def compute_efficiency(data: Dataset, output_file: TDirectory, **kwargs):
 
