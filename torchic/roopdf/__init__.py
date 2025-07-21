@@ -1,6 +1,6 @@
 import os
 
-def try_import_roogausexp():
+def try_import_root():
     try:
         import ROOT
         from ROOT import gInterpreter
@@ -11,10 +11,11 @@ def try_import_roogausexp():
         # Include headers and implementation
         gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausExp.hh"')
         gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausExp.cxx"')
+        gInterpreter.ProcessLine(f'#include "{CURRENT_DIR}/RooSillPdf.hh"')
 
         # Import the class to make it accessible
-        from ROOT import RooGausExp
-        return RooGausExp
+        from ROOT import RooGausExp, RooSillPdf
+        return RooGausExp, RooSillPdf
 
     except ImportError:
         print("ROOT not found. RooGausExp will not be available.")

@@ -9,8 +9,8 @@ from torchic.core.api import (
 from torchic import physics
 from torchic import utils
 
-from torchic.roopdf import try_import_roogausexp
-RooGausExp = try_import_roogausexp()
+from torchic.roopdf import try_import_root
+RooGausExp, RooSillPdf = try_import_root()
 
 __all__ = [
     'Dataset',
@@ -20,4 +20,6 @@ __all__ = [
     'Plotter',
     'physics',
     'utils',
+    'RooGausExp',
+    'RooSillPdf',
 ]
