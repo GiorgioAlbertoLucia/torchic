@@ -1,17 +1,5 @@
-import os
 import numpy as np
 from math import erf
-import pandas as pd
-from copy import deepcopy
-from ROOT import TH2F, TGraphErrors, TDirectory, TF1, gInterpreter, TCanvas, TPaveText
-from ROOT import RooDataHist, RooArgList, RooRealVar, RooFit
-
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-BETHEBLOCH_DIR = os.path.join(CURRENT_DIR, 'BetheBloch.hh')
-gInterpreter.ProcessLine(f'#include "{BETHEBLOCH_DIR}"')
-from ROOT import BetheBloch
-
-from torchic.utils.terminal_colors import TerminalColors as tc
 
 DEFAULT_BETHEBLOCH_PARS = { # params for TPC He3 pp
                             'kp1': -241.490, 
