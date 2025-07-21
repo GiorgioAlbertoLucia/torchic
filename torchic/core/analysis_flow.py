@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from torchic.core.dataset import Dataset
 from torchic.core.histogram import AxisSpec
 from torchic.utils.terminal_colors import TerminalColors as tc
+import numpy as np
 import yaml
 import uproot
 
