@@ -3,19 +3,20 @@ from torchic.core.api import (
     AxisSpec,
     HistLoadInfo,
     histogram,
-    Roofitter,
     Plotter,
 )
 
 from torchic import physics
 from torchic import utils
 
+from torchic.roopdf import try_import_roogausexp
+RooGausExp = try_import_roogausexp()
+
 __all__ = [
     'Dataset',
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
-    'Roofitter',
     'Plotter',
     'physics',
     'utils',
