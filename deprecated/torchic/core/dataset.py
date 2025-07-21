@@ -1,3 +1,7 @@
+'''
+    Dataset with a polars DataFrame backend -> does not fulfill the purpose
+'''
+
 import pandas as pd
 import polars as pl
 import uproot
@@ -317,3 +321,282 @@ class Dataset:
             return build_boost2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
         else:
             return build_boost2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+
+#############################################################
+
+class PlDataset:
+
+    def __init__(self, data: pl.DataFrame):
+        '''
+            Constructor for the Dataset class.
+            
+            Args:
+                data (str, list, or pd.DataFrame): The input data to be loaded. If a string, it should be the path to a single file. If a list, it should be a list of paths to multiple files. If a pd.DataFrame, it should be the data itself.
+                **kwargs: Additional keyword arguments to be passed to the pandas read_csv or read_parquet functions.
+                    - columns (list): The list of columns to read from the file.
+                    - folder_name (str): The name of the folder in the root file.
+                    - tree_name (str): The name of the tree in the root file.
+        '''
+        
+        self._data = data
+        self._subsets = SubsetDict()
+
+    def __getitem__(self, key):
+        if ':' in key:
+            key1, key2 = key.split(':')
+            subset = self._subsets[key1]
+            return subset[key2] if key2 else subset
+        return self._data[key]
+    
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    @classmethod
+    def from_root(cls, files, tree_name: str, folder_name: str = None, columns: list = None, **kwargs) -> 'PlDataset':
+        """
+        Improved from_root: collects DataFrames in a list, uses uproot.concatenate when possible,
+        handles missing trees, and concatenates once at the end.
+        """
+
+        files_list = []
+        if isinstance(files, str) or (isinstance(files, list) and all(isinstance(file, str) for file in files)):
+            files_list = files if isinstance(files, list) else [files]
+        else: 
+            raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'Input data must be a string or a list of strings.')
+        
+        uproot_kwargs = {k: v for k, v in kwargs.items() if k not in ['tree_name', 'columns', 'folder_name']}
+        dfs = []
+
+        if folder_name is None:
+            chuck_size = uproot_kwargs.get('chunk_size', 100_000)
+            uproot_kwargs.pop('step_size', None)
+            for chunck in uproot.iterate(
+                files_list,
+                tree_name,
+                filter_name=columns,
+                library="np",
+                step_size=chuck_size,
+                **uproot_kwargs
+            ):
+                print('chunking')
+                pl_df_temp = pl.DataFrame(chunck)
+                dfs.append(pl_df_temp)
+
+        else:
+            wildcard = folder_name.endswith('*')
+            base = folder_name[:-1] if wildcard else folder_name
+            for file in files_list:
+                f = uproot.open(file)
+                
+                if wildcard:
+                    keys = list(f.keys())
+                    _file_folders = [folder for folder in keys if (folder.startswith(base) and '/' not in folder)]
+                    file_folders_duplicated = [folder.split(';')[0] for folder in _file_folders] # list with potentially duplicated folders
+                    seen = {}
+                    for idx, val in enumerate(file_folders_duplicated):
+                        if val not in seen:
+                            seen[val] = idx
+                    file_folders = [_file_folders[idx] for idx in seen.values()]
+
+                    if not file_folders:
+                        print(tc.RED+'[WARNING]: '+tc.RESET+f'No folders matching "{base}*" in {file}, skipping.')
+                    for folder in file_folders:
+                        path = f'{file}:{folder}/{tree_name}'
+                        print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+path+tc.RESET)
+                        df_temp = uproot.open(path).arrays(filter_name=columns, library='np', **uproot_kwargs)
+                        pl_df_temp = pl.DataFrame(df_temp)
+                        dfs.append(pl_df_temp)
+                        
+                else:
+                    path = f'{file}:{folder_name}/{tree_name}'
+                    print(tc.GREEN+'[INFO]: '+tc.RESET+'Opening file: '+tc.UNDERLINE+tc.BLUE+path+tc.RESET)
+                    df_temp = uproot.open(path).arrays(filter_name=columns, library='np', **uproot_kwargs)
+                    pl_df_temp = pl.DataFrame(df_temp)
+                    dfs.append(pl_df_temp)
+
+        try:
+            data = pl.concat(dfs, copy=False)
+        except Exception as e:
+            print(tc.RED+'[ERROR]: '+tc.RESET+f'Concatenation failed: {e}, falling back to default concat.')
+            data = pl.concat(dfs)
+        return cls(data)      
+    
+    @property
+    def columns(self):
+        return self._data.columns
+    
+    @property
+    def shape(self):
+        return self._data.shape
+    
+    @property
+    def loc(self):
+        return self._data.loc
+    
+    @property
+    def data(self):
+        return self._data
+    
+    @property
+    def subsets(self):
+        return self._subsets
+    
+    def add_subset(self, name, condition):
+        '''
+            Add a subset to the dataset by applying a condition.
+        '''
+        if isinstance(condition, str):
+            context = {col: pl.col(col) for col in self._data.columns}
+            condition = eval(condition, {}, context)
+            self._subsets.add_subset(name, lambda: self._data.filter(condition))
+        else:
+            self._subsets.add_subset(name, lambda: self._data.filter(condition))
+
+    def query(self, *expr: str, inplace=True):
+        '''
+            Query the dataset using a string expression.
+            
+            Args:
+                expr (str): The query expression.
+                inplace (bool): Whether to modify the dataset in place.
+                **kwargs: Additional keyword arguments to be passed to the pandas query function.
+        '''
+        
+        context = {col: pl.col(col) for col in self._data.columns}
+        condition = eval(*expr, {}, context)
+        
+        new_data = self._data.filter(condition)
+        if inplace:
+            self._data = new_data
+        else:
+            return PlDataset(new_data)
+
+    def concat(self, other, **kwargs) -> 'PlDataset':
+        '''
+            Concatenate two datasets.
+
+            Args:
+                other (Dataset): The other dataset to concatenate.
+                **kwargs: Additional keyword arguments to be passed to the pandas concat function.
+        '''
+        if isinstance(other, list):
+            datas = [other_set.data for other_set in other if isinstance(other_set, PlDataset)]
+            return PlDataset(pl.concat([self._data] + datas, **kwargs))
+        elif isinstance(other, PlDataset):
+            return Dataset(pl.concat([self._data, other.data], **kwargs))
+        else:
+            raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'Other must be a list of PlDataset or a single PlDataset instance.')
+
+    def describe(self, **kwargs) -> None:
+        '''
+            Generate descriptive statistics of the dataset.
+
+            Args:
+                **kwargs: Additional keyword arguments to be passed to the pandas describe function.
+        '''
+        
+        return self._data.describe(**kwargs)
+    
+    def with_columns(self, exprs: str, **kwargs) -> None:
+        '''
+            Evaluate an expression in the dataset.
+
+            Args:
+                expr (str): The expression to evaluate.
+                **kwargs: Additional keyword arguments to be passed to the pandas eval function.
+        '''
+        self._data = self._data.with_columns(exprs, **kwargs)
+
+    def apply(self, func) -> pl.DataFrame:
+        '''
+            Apply a function to the dataset.
+
+            Args:
+                func (function): The function to apply.
+                **kwargs: Additional keyword arguments to be passed to the pandas apply function.
+        '''
+        
+        return self._data.apply(func)
+    
+    def drop(self, columns) -> None | pl.DataFrame:
+        '''
+            Drop specified labels from the dataset.
+
+            Args:
+                labels: The labels to drop.
+                **kwargs: Additional keyword arguments to be passed to the pandas drop function.
+        '''
+        
+        self._data.drop(columns)
+        
+    def build_th1(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
+        '''
+            Build a histogram with one axis
+    
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+    
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_TH1(self._subsets[subset][column], axis_spec_x)
+        else:
+            return build_TH1(self._data[column], axis_spec_x)
+        
+    def build_th2(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
+        '''
+            Build a histogram with two axes
+    
+            Args:
+                column_x (str): The column to be histogrammed on the x-axis
+                column_y (str): The column to be histogrammed on the y-axis
+                axis_spec_x (AxisSpec): The specification for the x-axis
+                axis_spec_y (AxisSpec): The specification for the y-axis
+    
+            Returns:
+                TH2F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+        else:
+            return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+
+    def build_boost1d(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> bh.Histogram:
+        '''
+            Build a histogram with one axis
+    
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+    
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_boost1(self._subsets[subset][column], axis_spec_x)
+        else:
+            return build_boost1(self._data[column], axis_spec_x)
+        
+    def build_boost2d(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> bh.Histogram:
+        '''
+            Build a histogram with one axis
+    
+            Args:
+                column (str): The column to be histogrammed
+                axis_spec_x (AxisSpec): The specification for the x-axis
+    
+            Returns:
+                TH1F: The histogram
+        '''
+        subset = kwargs.get('subset', None)
+        if subset:
+            return build_boost2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+        else:
+            return build_boost2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
+
+#############################################################
