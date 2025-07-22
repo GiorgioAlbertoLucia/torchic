@@ -11,15 +11,15 @@ def try_import_root():
         # Include headers and implementation
         gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausExp.hh"')
         gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausExp.cxx"')
-        gInterpreter.ProcessLine(f'#include "{CURRENT_DIR}/RooSillPdf.hh"')
+        gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooSillPdf.hh"')
 
         # Import the class to make it accessible
         from ROOT import RooGausExp, RooSillPdf
         return RooGausExp, RooSillPdf
 
     except ImportError:
-        print("ROOT not found. RooGausExp will not be available.")
+        print("ROOT not found. Functions will not be available.")
     except Exception as e:
-        print(f"ROOT is available, but RooGausExp failed to compile: {e}")
+        print(f"ROOT is available, but functions failed to compile: {e}")
 
-    return None
+    return None, None

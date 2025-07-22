@@ -4,7 +4,7 @@ from torchic.physics.calibration import (
 )
 
 from torchic.physics import ITS
-#from torchic.physics import simulations
+from torchic.physics import simulations
 
 import os
 
@@ -23,9 +23,9 @@ def try_import_root():
         return BetheBloch
 
     except ImportError:
-        print("ROOT not found. RooGausExp will not be available.")
+        print("ROOT not found. Functions will not be available.")
     except Exception as e:
-        print(f"ROOT is available, but RooGausExp failed to compile: {e}")
+        print(f"ROOT is available, but functions failed to compile: {e}")
 
     return None
 
@@ -36,5 +36,5 @@ __all__ = [
     'py_BetheBloch',
     'cluster_size_parametrisation',
     'ITS',
-    #'simulations',
+    'simulations',
 ]
