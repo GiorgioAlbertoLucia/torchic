@@ -300,3 +300,4 @@ def get_rms(hist: TH1F, low_edge: float = None, high_edge: float = None) -> floa
         return np.sqrt(total_value2 / total_content - (total_value / total_content) ** 2)
     else:
         return 0
+    
