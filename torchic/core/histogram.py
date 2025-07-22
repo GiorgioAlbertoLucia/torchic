@@ -135,6 +135,25 @@ def load_hist(hist_load_info: HistLoadInfo):
     hist_file.Close()
     return hist
 
+@overload
+@signature(str, str)
+def load_hist(hist_file_path: str, hist_name: str) -> TH1F:
+    '''
+        Load a histogram from a ROOT file
+
+        Args:
+            hist_load_info (HistLoadInfo): The information needed to load the histogram
+
+        Returns:
+            TH1F: The histogram
+    '''
+
+    hist_file = TFile(hist_file_path, 'READ')
+    hist = hist_file.Get(hist_name)
+    hist.SetDirectory(0)
+    hist_file.Close()
+    return hist
+
 def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: str = None, ytitle: str = 'Efficiency') -> TH1F:
     '''
         Compute the efficiency of a selection
