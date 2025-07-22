@@ -12,7 +12,10 @@
 #include <TF1.h>
 #include <TString.h>
 
-void RunTwoBodyDecaySimulation(const char * MotherFileName,const char * MotherHistName,const char * inputTimeFileName,const char * inputTimeHistName,const char * OutputFileName,float motherMass,float firstDaugtherMass,float secondDaughterMass,float detectorLimit=0.,const int nEvents=1000000,int seed=0)
+void RunTwoBodyDecaySimulation(const char * MotherFileName, const char * MotherHistName, 
+    const char * inputTimeFileName, const char * inputTimeHistName,const char * OutputFileName,
+    float motherMass, float firstDaughterMass, float secondDaughterMass, 
+    float detectorLimit=0., int nEvents=1000000, int seed=0, float MaxMotherPt=10. /* GeV/c */)
 {
     /*
     *   This function is used to run the simulation of the two body decay of the mother particle
@@ -23,7 +26,7 @@ void RunTwoBodyDecaySimulation(const char * MotherFileName,const char * MotherHi
     *   inputTimeHistName: The name of the histogram containing the decay time distribution
     *   OutputFileName: The name of the file to save the output, it will contain the pt distribution of daughters and mother
     *   motherMass: The mass of the mother particle (GeV/c^2)
-    *   firstDaugtherMass: The mass of the first daughter particle (GeV/c^2)
+    *   firstDaughterMass: The mass of the first daughter particle (GeV/c^2)
     *   secondDaughterMass: The mass of the second daughter particle (GeV/c^2)
     *   detectorLimit: The limit of the detector  (cm) (optional)
     *   nEvents: The number of events to generate
@@ -45,7 +48,7 @@ void RunTwoBodyDecaySimulation(const char * MotherFileName,const char * MotherHi
 
     gRandom->SetSeed(seed);
 
-    for(int ievent=0;ievent<nEvents;i++)
+    for(int ievent=0;ievent<nEvents;ievent++)
     {
         float decayTime = hTime->GetRandom();
         float motherPt = hMotherPt->GetRandom();
@@ -61,10 +64,10 @@ void RunTwoBodyDecaySimulation(const char * MotherFileName,const char * MotherHi
 
         ROOT::Math::Boost boost(betax,betay,betaz);
 
-        float energyFirstDaughterCM = (motherMass*motherMass+firstDaugtherMass*firstDaugtherMass-secondDaughterMass*secondDaughterMass)/(2*motherMass); //Energy of the first daughter in the Center of Mass frame
-        float energySecondDaughterCM = (motherMass*motherMass+secondDaugtherMass*secondDaughterMass-firstDaughterMass*firstDaughterMass)/(2*motherMass); //Energy of the second daughter in the Center of Mass frame
-        float momentumFirstDaughterCM = TMath::Sqrt(energyFirstDaughterCM*energyFirstDaughterCM-firstDaugtherMass*firstDaugtherMass); //Momentum of the first daughter in the Center of Mass frame
-        float momentumSecondDaughterCM = TMath::Sqrt(energySecondDaughterCM*energySecondDaughterCM-secondDaugtherMass*secondDaugtherMass); //Momentum of the second daughter in the Center of Mass frame
+        float energyFirstDaughterCM = (motherMass*motherMass+firstDaughterMass*firstDaughterMass-secondDaughterMass*secondDaughterMass)/(2*motherMass); //Energy of the first daughter in the Center of Mass frame
+        float energySecondDaughterCM = (motherMass*motherMass+secondDaughterMass*secondDaughterMass-firstDaughterMass*firstDaughterMass)/(2*motherMass); //Energy of the second daughter in the Center of Mass frame
+        float momentumFirstDaughterCM = TMath::Sqrt(energyFirstDaughterCM*energyFirstDaughterCM-firstDaughterMass*firstDaughterMass); //Momentum of the first daughter in the Center of Mass frame
+        float momentumSecondDaughterCM = TMath::Sqrt(energySecondDaughterCM*energySecondDaughterCM-secondDaughterMass*secondDaughterMass); //Momentum of the second daughter in the Center of Mass frame
 
         float thetaCM = TMath::ACos(1-2*gRandom->Uniform()); //Uniform distribution between 0 and 2pi
         float phiCM = 2*TMath::Pi()*gRandom->Uniform(); //Uniform distribution between 0 and 2pi

@@ -3,7 +3,7 @@
 #include <TRandom3.h>
 #include <Riostream.h>
 
-TH1F RunExponentialDecaySimulation(const double tau, const int nevents, const int nbins, const double totT, const int seed)
+TH1F RunExponentialDecaySimulation(const double tau, int nevents, const int nbins, const double totT, const int seed)
 {
     /*
         Function to generate a time distribution of a decay process
@@ -23,6 +23,7 @@ TH1F RunExponentialDecaySimulation(const double tau, const int nevents, const in
     TH1F *decayhist = new TH1F("decayhist","Decay",nbins+1,-delt,totT+delt/2);
     const double prob=alfa*delt;
     decayhist->Fill(0.,nevents);
+    decayhist->SetBinError(0., std::sqrt(nevents));
     for(double time=delt; time<totT+delt/2; time+=delt)
     {
         int ndec=0;
@@ -34,7 +35,8 @@ TH1F RunExponentialDecaySimulation(const double tau, const int nevents, const in
             }
         }
         nevents-=ndec;
-        decayhist->Fill(time,nevents);
+        decayhist->Fill(time, nevents);
+        decayhist->SetBinError(time, std::sqrt(nevents));
     }
     return *decayhist;
 }
