@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchic',
-    version='0.5.23',  # Initial version
+    version='0.5.25',  # Initial version
     author='Giorgio Alberto Lucia, Roberta Ferioli',
     author_email='giogioalberto@gmail.com',
     description='A Python library for data analysis in python and ROOT (tailored for high energy physics)',
@@ -19,8 +19,10 @@ setup(
         'physics/BetheBloch.hh',
         'roopdf/RooCustomPdfs/RooGausExp.hh',
         'roopdf/RooCustomPdfs/RooGausExp.cxx',
-        'physics/simulations/ExponentialDecaySimulation.cpp',
-        'physics/simulations/TwoBodyDecaySimulation.cpp',
+        'roopdf/RooCustomPdfs/RooSillPdf.hh',
+        'physics/simulations/ExponentialDecaySimulation.cxx',
+        'physics/simulations/TwoBodyDecaySimulation.cxx',
+        'physics/simulations/test.cxx',
         ]},  # Include header files
     python_requires='>=3.6',  # Minimum Python version
     install_requires=[

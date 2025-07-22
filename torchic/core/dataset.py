@@ -106,9 +106,7 @@ class Dataset:
                 
                 if wildcard:
                     keys = list(f.keys())
-                    print(f'{keys=}')
                     _file_folders = [folder for folder in keys if (folder.startswith(base) and '/' not in folder)]
-                    print(f'{_file_folders=}')
                     file_folders_duplicated = [folder.split(';')[0] for folder in _file_folders] # list with potentially duplicated folders
                     seen = {}
                     for idx, val in enumerate(file_folders_duplicated):
