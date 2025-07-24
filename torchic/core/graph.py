@@ -1,9 +1,13 @@
-from  torchic.utils.overload import overload, signature
+from functools import singledispatch
+import pandas as pd
 from ROOT import TGraphErrors
 
-@overload
-@signature('DataFrame', str, str, str, str, str, str)
-def create_graph(df, x: str, y: str, ex, ey, name:str='', title:str='') -> TGraphErrors:
+@singledispatch
+def create_graph(arg, *args, **kwargs):
+    raise NotImplementedError(f"Unsupported type: {type(arg)}")
+
+@create_graph.register
+def _(df: pd.DataFrame, x: str, y: str, ex, ey, name:str='', title:str='') -> TGraphErrors:
         '''
             Create a TGraphErrors from the input DataFrame
 
@@ -14,10 +18,6 @@ def create_graph(df, x: str, y: str, ex, ey, name:str='', title:str='') -> TGrap
             ex (str): x-axis error
             ey (str): y-axis error
         '''
-
-        # eliminate None values on x, y
-        #df = df.filter(df[x].is_not_null())
-        #df = df.filter(df[y].is_not_null())
 
         if len(df) == 0:
             return TGraphErrors()
@@ -33,9 +33,8 @@ def create_graph(df, x: str, y: str, ex, ey, name:str='', title:str='') -> TGrap
 
         return graph
 
-@overload
-@signature('list', 'list', 'list', 'list', str, str)
-def create_graph(xs, ys, exs, eys, name:str='', title:str='') -> TGraphErrors:
+@create_graph.register
+def _(xs: list, ys: list, exs: list, eys: list, name:str='', title:str='') -> TGraphErrors:
         '''
             Create a TGraphErrors from the input DataFrame
 
@@ -46,10 +45,6 @@ def create_graph(xs, ys, exs, eys, name:str='', title:str='') -> TGraphErrors:
             ex (str): x-axis error
             ey (str): y-axis error
         '''
-
-        # eliminate None values on x, y
-        #df = df.filter(df[x].is_not_null())
-        #df = df.filter(df[y].is_not_null())
 
         if len(xs) == 0:
             return TGraphErrors()
