@@ -23,3 +23,10 @@ def try_import_root():
         print(f"ROOT is available, but functions failed to compile: {e}")
 
     return None, None
+
+RooGausExp, RooSillPdf = try_import_root()
+
+__all__ = [
+    'RooGausExp',
+    'RooSillPdf',
+]

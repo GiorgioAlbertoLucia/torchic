@@ -35,7 +35,7 @@ def average_cluster_size(cluster_sizes: pd.Series) -> tuple:
     max_cluster_size = 0
     n_hits = np.zeros(len(np_cluster_sizes))
     for ilayer in range(N_ITS_LAYERS):
-        cluster_size_layer = np.right_shift(np_cluster_sizes, 4*ilayer) & 0b1111
+        cluster_size_layer = (np_cluster_sizes >> 4*ilayer) & 0b1111
         avg_cluster_size += cluster_size_layer
         n_hits += (cluster_size_layer > 0).astype(int)
         max_cluster_size = np.maximum(max_cluster_size, cluster_size_layer)
