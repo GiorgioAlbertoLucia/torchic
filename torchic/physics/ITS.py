@@ -30,7 +30,7 @@ def average_cluster_size(cluster_sizes: pd.Series) -> tuple:
         Compute the average cluster size. A truncated mean will be used to avoid the presence of outliers.
     '''
     
-    np_cluster_sizes = cluster_sizes.to_numpy()
+    np_cluster_sizes = cluster_sizes.to_numpy(dtype=np.uint64)
     avg_cluster_size = np.zeros(len(np_cluster_sizes))
     max_cluster_size = 0
     n_hits = np.zeros(len(np_cluster_sizes))
