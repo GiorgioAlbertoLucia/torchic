@@ -27,7 +27,7 @@ class HistLoadInfo:
     hist_file_path: str
     hist_name: str
 
-def build_TH1(data, axis_spec_x: AxisSpec) -> TH1F:
+def build_TH1(data, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
     '''
         Build a histogram with one axis
 
@@ -39,12 +39,14 @@ def build_TH1(data, axis_spec_x: AxisSpec) -> TH1F:
             TH1F: The histogram
     '''
 
-    hist = TH1F(axis_spec_x.name, axis_spec_x.title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax)
+    name = kwargs.get('name', axis_spec_x.name)
+    title = kwargs.get('title', axis_spec_x.title)
+    hist = TH1F(name, title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax)
     for x in data:
         hist.Fill(x)
     return hist
 
-def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> TH2F:
+def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
     '''
         Build a histogram with two axes
 
@@ -58,7 +60,9 @@ def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -> T
             TH1F: The histogram
     '''
 
-    hist = TH2F(axis_spec_y.name, axis_spec_y.title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
+    name = kwargs.get('name', axis_spec_x.name + '_' + axis_spec_y.name)
+    title = kwargs.get('title', axis_spec_x.title + ';' + axis_spec_y.title)
+    hist = TH2F(name, title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
     for x, y in zip(data_x, data_y):
         hist.Fill(x, y)
     return hist

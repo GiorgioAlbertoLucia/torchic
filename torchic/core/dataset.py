@@ -259,15 +259,21 @@ class Dataset:
             Args:
                 column (str): The column to be histogrammed
                 axis_spec_x (AxisSpec): The specification for the x-axis
+
+                kwargs:
+                    subset (str): The name of the subset to use for the histogram. If not provided, the full dataset is used.
+                    name (str): The name of the histogram. If not provided, a default name is generated.
+                    title (str): The title of the histogram. If not provided, a default title is generated.
+
     
             Returns:
                 TH1F: The histogram
         '''
         subset = kwargs.get('subset', None)
         if subset:
-            return build_TH1(self._subsets[subset][column], axis_spec_x)
+            return build_TH1(self._subsets[subset][column], axis_spec_x, **kwargs)
         else:
-            return build_TH1(self._data[column], axis_spec_x)
+            return build_TH1(self._data[column], axis_spec_x, **kwargs)
         
     def build_th2(self, column_x: str, column_y: str, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
         '''
@@ -278,16 +284,21 @@ class Dataset:
                 column_y (str): The column to be histogrammed on the y-axis
                 axis_spec_x (AxisSpec): The specification for the x-axis
                 axis_spec_y (AxisSpec): The specification for the y-axis
+
+                kwargs:
+                    subset (str): The name of the subset to use for the histogram. If not provided, the full dataset is used.
+                    name (str): The name of the histogram. If not provided, a default name is generated.
+                    title (str): The title of the histogram. If not provided, a default title is generated.
     
             Returns:
                 TH2F: The histogram
         '''
         subset = kwargs.get('subset', None)
         if subset:
-            return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y)
+            return build_TH2(self._subsets[subset][column_x], self._subsets[subset][column_y], axis_spec_x, axis_spec_y, **kwargs)
         else:
-            return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y)
-
+            return build_TH2(self._data[column_x], self._data[column_y], axis_spec_x, axis_spec_y, **kwargs)
+    
     def build_boost1d(self, column: str, axis_spec_x: AxisSpec, **kwargs) -> bh.Histogram:
         '''
             Build a histogram with one axis
