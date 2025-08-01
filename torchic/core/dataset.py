@@ -143,6 +143,9 @@ class Dataset:
     def shape(self):
         return self._data.shape
     
+    def __len__(self):
+        return len(self._data)
+
     @property
     def loc(self):
         return self._data.loc
@@ -177,7 +180,7 @@ class Dataset:
             tmp_data = self._data.query(expr, inplace=False, **kwargs).copy()
             return Dataset(tmp_data)
 
-    def concat(self, other: 'Dataset', **kwargs) -> 'Dataset':
+    def concat(self, other, **kwargs) -> 'Dataset':
         '''
             Concatenate two datasets.
 
@@ -185,9 +188,14 @@ class Dataset:
                 other (Dataset): The other dataset to concatenate.
                 **kwargs: Additional keyword arguments to be passed to the pandas concat function.
         '''
-        
-        return Dataset(pd.concat([self._data, other.data], **kwargs))
-
+        if isinstance(other, list):
+            all_df = [self._data] + [ds.data for ds in other]
+        elif isinstance(other, Dataset):
+            all_df = [self._data, other.data]
+        else:
+            raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'Other must be a Dataset or a list of Datasets.')
+        return Dataset(pd.concat(all_df, **kwargs))
+    
     def describe(self, **kwargs) -> pd.DataFrame:
         '''
             Generate descriptive statistics of the dataset.
