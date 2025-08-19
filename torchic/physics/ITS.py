@@ -71,5 +71,6 @@ def sigma_its(beta_gamma: pd.Series, pid_parameters: tuple = None, particle: str
     
     kp1, kp2, kp3, res1, res2, res3 = pid_parameters
     avg_cluster_size = kp1 / beta_gamma**kp2 + kp3
-    sigma_cluster_size = avg_cluster_size * (res1 * erf((beta_gamma - res2) / res3))
-    return sigma_cluster_size
+    if particle == 'He':
+        return avg_cluster_size * (res1 + (beta_gamma * res2))
+    return avg_cluster_size * (res1 * erf((beta_gamma - res2) / res3))
