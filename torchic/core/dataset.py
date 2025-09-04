@@ -135,6 +135,20 @@ class Dataset:
                 data = pd.concat(dfs, ignore_index=True)
             return cls(data)      
     
+    @classmethod
+    def concat(cls, datasets: list, **kwargs) -> 'Dataset':
+        '''
+            Concatenate multiple Dataset instances into a single Dataset.
+
+            Args:
+                datasets (list): A list of Dataset instances to concatenate.
+                **kwargs: Additional keyword arguments to be passed to the pandas concat function.
+        '''
+        if not all(isinstance(ds, Dataset) for ds in datasets):
+            raise ValueError(tc.RED+'[ERROR]: '+tc.RESET+'All elements in the list must be Dataset instances.')
+        all_df = [ds.data for ds in datasets]
+        return cls(pd.concat(all_df, **kwargs)) 
+
     @property
     def columns(self):
         return self._data.columns

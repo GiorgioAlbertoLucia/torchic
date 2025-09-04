@@ -25,7 +25,7 @@ def unpack_cluster_sizes(cluster_sizes, layer) -> list:
     '''
     return (cluster_sizes >> layer*4) & 0b1111
 
-def average_cluster_size(cluster_sizes: pd.Series) -> tuple:
+def average_cluster_size(cluster_sizes: pd.Series, do_truncated: bool = False) -> tuple:
     '''
         Compute the average cluster size. A truncated mean will be used to avoid the presence of outliers.
     '''
@@ -40,8 +40,11 @@ def average_cluster_size(cluster_sizes: pd.Series) -> tuple:
         n_hits += (cluster_size_layer > 0).astype(int)
         max_cluster_size = np.maximum(max_cluster_size, cluster_size_layer)
     
-    avg_cluster_size = (avg_cluster_size - max_cluster_size) / (n_hits - 1)
-    # avg_cluster_size /= n_hits
+    if do_truncated:
+        # Truncated mean: remove the maximum cluster size
+        avg_cluster_size = (avg_cluster_size - max_cluster_size) / (n_hits - 1)
+    else: 
+        avg_cluster_size /= n_hits
 
     return avg_cluster_size, n_hits
 

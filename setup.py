@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchic',
-    version='0.5.31',  # Initial version
+    version='0.5.32',  # Initial version
     author='Giorgio Alberto Lucia, Roberta Ferioli',
     author_email='giogioalberto@gmail.com',
     description='A Python library for data analysis in python and ROOT (tailored for high energy physics)',
