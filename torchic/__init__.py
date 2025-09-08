@@ -4,6 +4,7 @@ from torchic.core.api import (
     HistLoadInfo,
     histogram,
     Plotter,
+    fit
 )
 
 from torchic import physics
@@ -16,6 +17,7 @@ __all__ = [
     'HistLoadInfo',
     'histogram',
     'Plotter',
+    'fit',
     'physics',
     'utils',
     'roopdf',
