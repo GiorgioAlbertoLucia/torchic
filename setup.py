@@ -18,7 +18,7 @@ setup(
     package_data={'torchic': [
         'physics/BetheBloch.hh',
         'roopdf/RooCustomPdfs/RooGausExp.hh',
-        'roopdf/RooCustomPdfs/RooGausExp.cxx',
+        'roopdf/RooCustomPdfs/RooGausDExp.hh',
         'roopdf/RooCustomPdfs/RooSillPdf.hh',
         'physics/simulations/ExponentialDecaySimulation.cxx',
         'physics/simulations/TwoBodyDecaySimulation.cxx',
