@@ -22,7 +22,7 @@ def try_import_root():
     except Exception as e:
         print(f"ROOT is available, but functions failed to compile: {e}")
 
-    return None, None
+    return None, None, None
 
 RooGausExp, RooSillPdf, RooGausDExp = try_import_root()
 
