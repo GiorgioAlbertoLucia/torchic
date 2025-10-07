@@ -2,6 +2,7 @@
     Various utility functions for creating histograms with ROOT
 '''
 
+from functools import singledispatch
 from dataclasses import dataclass
 from ROOT import TH1F, TH2F, TFile
 import boost_histogram as bh
@@ -42,8 +43,11 @@ def build_TH1(data, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
     name = kwargs.get('name', axis_spec_x.name)
     title = kwargs.get('title', axis_spec_x.title)
     hist = TH1F(name, title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax)
-    for x in data:
-        hist.Fill(x)
+    
+    arr_x = np.ascontiguousarray(data, dtype=np.float64)
+    arr_w = np.ones(len(data), dtype=np.float64)
+    
+    hist.FillN(len(arr_x), arr_x, arr_w)
     return hist
 
 def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
@@ -63,8 +67,12 @@ def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kw
     name = kwargs.get('name', axis_spec_x.name + '_' + axis_spec_y.name)
     title = kwargs.get('title', axis_spec_x.title + ';' + axis_spec_y.title)
     hist = TH2F(name, title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
-    for x, y in zip(data_x, data_y):
-        hist.Fill(x, y)
+    
+    arr_x = np.ascontiguousarray(data_x, dtype=np.float64)
+    arr_y = np.ascontiguousarray(data_y, dtype=np.float64)
+    arr_w = np.ones(len(data_x), dtype=np.float64)
+    
+    hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
     return hist
 
 def fill_TH1(data, hist: TH1F):
@@ -75,8 +83,10 @@ def fill_TH1(data, hist: TH1F):
             data (pd.Series): The data to fill the histogram with
             hist (TH1F): The histogram to fill
     '''
-    for x in data:
-        hist.Fill(x)
+    
+    arr_x = np.ascontiguousarray(data, dtype=np.float64)
+    arr_w = np.ones(len(data), dtype=np.float64)
+    hist.FillN(len(arr_x), arr_x, arr_w)
     
 def fill_TH2(data_x, data_y, hist: TH2F):
     '''
@@ -87,8 +97,11 @@ def fill_TH2(data_x, data_y, hist: TH2F):
             data_y (pd.Series): The data to fill the y-axis of the histogram with
             hist (TH2F): The histogram to fill
     '''
-    for x, y in zip(data_x, data_y):
-        hist.Fill(x, y)
+    arr_x = np.ascontiguousarray(data_x, dtype=np.float64)
+    arr_y = np.ascontiguousarray(data_y, dtype=np.float64)
+    arr_w = np.ones(len(data_x), dtype=np.float64)
+    
+    hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
 
 def build_boost1(data, axis_spec_x: AxisSpec) -> bh.Histogram:
     '''
@@ -120,9 +133,12 @@ def build_boost2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec) -
     hist.fill(data_x, data_y)
     return hist
 
-@overload
-@signature('HistLoadInfo')
-def load_hist(hist_load_info: HistLoadInfo):
+@singledispatch
+def load_hist(arg, *args, **kwargs):
+    raise NotImplementedError(f"Unsupported type: {type(arg)}")
+
+@load_hist.register
+def _(hist_load_info: HistLoadInfo):
     '''
         Load a histogram from a ROOT file
 
@@ -139,9 +155,8 @@ def load_hist(hist_load_info: HistLoadInfo):
     hist_file.Close()
     return hist
 
-@overload
-@signature(str, str)
-def load_hist(hist_file_path: str, hist_name: str) -> TH1F:
+@load_hist.register
+def _(hist_file_path: str, hist_name: str) -> TH1F:
     '''
         Load a histogram from a ROOT file
 
