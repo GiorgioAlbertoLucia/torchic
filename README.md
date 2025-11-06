@@ -3,7 +3,8 @@
 
 # ➤ torchic
 
-**Tools for pOstpRoCessing in HIgh-energy physiCs**
+**<span style="color:red">Tools</span> for <span style="color:red">pOstpRoCessing</span> in <span style="color:red">HI</span>gh-energy physi<span style="color:red">Cs</span>**
+
 
 <div style="text-align: center;">
   <img src="images/torchic-logo.webp" alt="Torchic Logo" width="300" />
@@ -115,5 +116,6 @@ Manual tests are provided in the tests folder to verify the functionality of eac
 ## ➤ Examples
 
 Refer to the examples folder for use cases and example scripts that illustrate how to integrate torchic tools into your projects.
+
 
 
