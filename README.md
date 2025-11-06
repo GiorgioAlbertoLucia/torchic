@@ -3,7 +3,7 @@
 
 # ➤ torchic
 
-**<span style="color:red">*T*ools</span> for <span style="color:red">p*O*stp*R*o*C*essing</span> in <span style="color:red">*HI*</span>gh-energy physi<span style="color:red">*C*s</span>**
+**<span style="color:red">Tools</span> for <span style="color:red">pOstpRoCessing</span> in <span style="color:red">HI</span>gh-energy physi<span style="color:red">Cs</span>**
 
 
 <div style="text-align: center;">
@@ -116,6 +116,7 @@ Manual tests are provided in the tests folder to verify the functionality of eac
 ## ➤ Examples
 
 Refer to the examples folder for use cases and example scripts that illustrate how to integrate torchic tools into your projects.
+
 
 
 
