@@ -1,6 +1,8 @@
 from functools import singledispatch
 import pandas as pd
-from ROOT import TGraphErrors
+from ROOT import TGraphErrors, TFile
+
+from torchic.core.histogram import HistLoadInfo
 
 @singledispatch
 def create_graph(arg, *args, **kwargs):
@@ -59,3 +61,41 @@ def _(xs: list, ys: list, exs: list, eys: list, name:str='', title:str='') -> TG
         graph.SetTitle(title)
 
         return graph
+
+@singledispatch
+def load_graph(arg, *args, **kwargs):
+    raise NotImplementedError(f"Unsupported type: {type(arg)}")
+
+@load_graph.register
+def _(graph_load_info: HistLoadInfo):
+    '''
+        Load a graph from a ROOT file
+
+        Args:
+            graph_load_info (HistLoadInfo): The information needed to load the graph
+
+        Returns:
+            TH1F: The graph
+    '''
+
+    graph_file = TFile(graph_load_info.graph_file_path, 'READ')
+    hist = graph_file.Get(graph_load_info.graph_name)
+    graph_file.Close()
+    return hist
+
+@load_graph.register
+def _(graph_file_path: str, graph_name: str):
+    '''
+        Load a graph from a ROOT file
+
+        Args:
+            graph_load_info (HistLoadInfo): The information needed to load the graph
+
+        Returns:
+            TH1F: The graph
+    '''
+
+    graph_file = TFile(graph_file_path, 'READ')
+    hist = graph_file.Get(graph_name)
+    graph_file.Close()
+    return hist
