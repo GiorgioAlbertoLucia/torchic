@@ -32,6 +32,7 @@ setup(
         'scikit-learn',
         'pyYAML',
         'uproot',
+        'boost_histograms',
     ],
     extras_require={
         'ROOT': ['ROOT'],
