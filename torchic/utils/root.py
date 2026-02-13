@@ -21,3 +21,17 @@ def set_root_object(object, **kwargs):
         object.SetFillColorAlpha(*kwargs['fill_color_alpha'])
     if 'title' in kwargs:
         object.SetTitle(kwargs['title'])
+    if 'name' in kwargs:
+        object.SetName(kwargs['name'])
+    if 'x_title_size' in kwargs:
+        object.GetXaxis().SetTitleSize(kwargs['x_title_size'])
+    if 'y_title_size' in kwargs:
+        object.GetYaxis().SetTitleSize(kwargs['y_title_size'])
+    if 'x_label_size' in kwargs:
+        object.GetXaxis().SetLabelSize(kwargs['x_label_size'])
+    if 'y_label_size' in kwargs:
+        object.GetYaxis().SetLabelSize(kwargs['y_label_size'])
+    if 'x_title_offset' in kwargs:
+        object.GetXaxis().SetTitleOffset(kwargs['x_title_offset'])
+    if 'y_title_offset' in kwargs:
+        object.GetYaxis().SetTitleOffset(kwargs['y_title_offset'])
