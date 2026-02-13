@@ -4,7 +4,7 @@
 
 from functools import singledispatch
 from dataclasses import dataclass
-from ROOT import TH1F, TH2F, TFile
+from ROOT import TH1F, TH2F, TFile, TGraphErrors
 import boost_histogram as bh
 from torchic.utils.overload import overload, signature
 
@@ -338,4 +338,29 @@ def get_rms(hist: TH1F, low_edge: float = None, high_edge: float = None) -> floa
         return np.sqrt(total_value2 / total_content - (total_value / total_content) ** 2)
     else:
         return 0
+
+def hist_to_graph(hist: TH1F, name: str = None, xtitle: str = None, ytitle: str = None):
+    '''
+        Convert a histogram to a graph
+        
+        Args:
+            hist (TH1F): The histogram to convert
+            name (str): The name of the graph
+            xtitle (str): The x-axis title
+            ytitle (str): The y-axis title
+            
+        Returns:
+            TGraphErrors: The graph with errors
+    '''
     
+    graph = TGraphErrors(hist.GetNbinsX())
+    for ibin in range(1, hist.GetNbinsX() + 1):
+        graph.SetPoint(ibin - 1, hist.GetXaxis().GetBinCenter(ibin), hist.GetBinContent(ibin))
+        graph.SetPointError(ibin - 1, 0, hist.GetBinError(ibin))
+    if name is not None:
+        graph.SetName(name)
+    if xtitle is not None:
+        graph.GetXaxis().SetTitle(xtitle)
+    if ytitle is not None:
+        graph.GetYaxis().SetTitle(ytitle)
+    return graph
