@@ -60,6 +60,9 @@ class Plotter:
     def create_multigraph(self, axis_specs: list, **kwargs):
 
         self.multigraph = TMultiGraph(f'{axis_specs[0]["name"]}_mg', axis_specs[0]["title"])
+        self.multigraph.GetXaxis().SetLimits(axis_specs[0]['xmin'], axis_specs[0]['xmax'])
+        self.multigraph.SetMinimum(axis_specs[1]['xmin'])
+        self.multigraph.SetMaximum(axis_specs[1]['xmax'])
 
     def draw_multigraph(self, **kwargs):
 
@@ -113,6 +116,25 @@ class Plotter:
         graph.SetLineWidth(kwargs.get('line_width', 1))
         graph.SetLineStyle(kwargs.get('line_style', 1))
 
+        npoints = graph.GetN()
+
+        if kwargs.get('drop_functions', False):
+            for key in graph.GetListOfFunctions():
+                graph.GetListOfFunctions().Remove(key)
+
+        if 'xmin' in kwargs:
+            for ipoint in range(npoints-1, -1, -1):
+                x = graph.GetPointX(ipoint)
+                if x < kwargs['xmin']:
+                    graph.RemovePoint(ipoint)
+
+        if 'xmax' in kwargs:
+            npoints = graph.GetN()  # Recalculate after xmin removal
+            for ipoint in range(npoints-1, -1, -1):
+                x = graph.GetPointX(ipoint)
+                if x > kwargs['xmax']:
+                    graph.RemovePoint(ipoint)
+        
         self.graph_dict[graph_label] = graph
 
         if self._n_pads < 2:
