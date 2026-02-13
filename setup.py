@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='torchic',
-    version='0.5.41',  # Initial version
+    version='0.5.44',  # Initial version
     author='Giorgio Alberto Lucia, Roberta Ferioli',
     author_email='giogioalberto@gmail.com',
     description='A Python library for data analysis in python and ROOT (tailored for high energy physics)',
@@ -32,7 +32,7 @@ setup(
         'scikit-learn',
         'pyYAML',
         'uproot',
-        'boost_histograms',
+        'boost-histogram',
     ],
     extras_require={
         'ROOT': ['ROOT'],
