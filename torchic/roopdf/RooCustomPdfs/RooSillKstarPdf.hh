@@ -24,7 +24,6 @@ protected:
   RooRealProxy gamma;   // Width (Gamma)
   RooRealProxy mass_daughter1; // Mass of daughter particle 1
   RooRealProxy mass_daughter2; // Mass of daughter particle 2
-  RooRealProxy eth;     // Threshold (Eth)
   RooRealProxy l;  // Tota angular momentum (l)
 
   Double_t evaluate() const override;
@@ -54,16 +53,18 @@ RooSillKstarPdf::RooSillKstarPdf(const char *name, const char *title,
     gamma("gamma", "Width", this, _gamma),
     mass_daughter1("mass_daughter1", "Mass of daughter particle 1", this, _mass_daughter1),
     mass_daughter2("mass_daughter2", "Mass of daughter particle 2", this, _mass_daughter2),
-    eth("eth", "Threshold", this, mass_daughter1 + mass_daughter2),
     l("l", "Total angular momentum", this, _l)
-{}
+{
+}
 
 RooSillKstarPdf::RooSillKstarPdf(const RooSillKstarPdf& other, const char* name)
   : RooAbsPdf(other, name),
     x("x", this, other.x),
     mass("mass", this, other.mass),
     gamma("gamma", this, other.gamma),
-    eth("eth", this, other.eth)
+    mass_daughter1("mass_daughter1", this, other.mass_daughter1),
+    mass_daughter2("mass_daughter2", this, other.mass_daughter2),
+    l("l", this, other.l)
 {}
 
 double RooSillKstarPdf::evaluate() const {
@@ -72,7 +73,7 @@ double RooSillKstarPdf::evaluate() const {
   double E = std::sqrt(kstar * kstar + mass_daughter1 * mass_daughter1) + std::sqrt(kstar * kstar + mass_daughter2 * mass_daughter2);
   double M = mass;
   double G = gamma;
-  double Eth = eth;
+  double Eth = mass_daughter1 + mass_daughter2;
 
   if (E <= Eth) return 0.0;
 
@@ -80,11 +81,11 @@ double RooSillKstarPdf::evaluate() const {
   double M2 = M * M;
   double Eth2 = Eth * Eth;
   
-  double gamma_tilde_denom = (std::pow(M2 - Eth2, l_wave + 0.5));
+  double gamma_tilde_denom = (std::pow(M2 - Eth2, l + 0.5));
   if (gamma_tilde_denom == 0.0) return 0.0;
   
   
-  double gamma_tilde = G * (std::pow(M, 2. * l_wave + 1)) / gamma_tilde_denom;
+  double gamma_tilde = G * (std::pow(M, 2. * l + 1)) / gamma_tilde_denom;
 
   double numerator_fraction = std::pow(E2 - Eth2, l + 0.5) / std::pow(E, 2. * l);
   double numerator = gamma_tilde * numerator_fraction;
