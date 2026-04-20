@@ -5,6 +5,7 @@ from torchic.physics.calibration import (
 
 from torchic.physics import ITS
 from torchic.physics import simulations
+from torchic.physics import particles
 
 import os
 
@@ -37,4 +38,5 @@ __all__ = [
     'cluster_size_parametrisation',
     'ITS',
     'simulations',
+    'particles',
 ]
