@@ -13,25 +13,27 @@ class RooPdf:
             # Include headers and implementation
             gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausExp.hh"')
             gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooSillPdf.hh"')
-            gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooSillKstarPdf.hh"')
+            gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooSillGeneralizedPdf.hh"')
+            gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooSillGeneralizedKstarPdf.hh"')
             gInterpreter.ProcessLine(f'#include "{pdf_dir}/RooGausDExp.hh"')
 
             # Import the class to make it accessible
-            from ROOT import RooGausExp, RooSillPdf, RooSillKstarPdf, RooGausDExp
-            return RooGausExp, RooSillPdf, RooSillKstarPdf, RooGausDExp
+            from ROOT import RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp
+            return RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp
 
         except ImportError:
             print("ROOT not found. Functions will not be available.")
         except Exception as e:
             print(f"ROOT is available, but functions failed to compile: {e}")
 
-        return None, None, None
+        return None, None, None, None, None
 
-RooGausExp, RooSillPdf, RooSillKstarPdf, RooGausDExp = RooPdf.try_import_roopdf()
+RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp = RooPdf.try_import_roopdf()
 
 __all__ = [
     'RooGausExp',
     'RooSillPdf',
-    'RooSillKstarPdf',
+    'RooSillGeneralizedPdf',
+    'RooSillGeneralizedKstarPdf',
     'RooGausDExp',
 ]

@@ -4,19 +4,19 @@
 #include "RooRealProxy.h"
 #include "RooAbsReal.h"
 
-class RooSillKstarPdf : public RooAbsPdf {
+class RooSillGeneralizedKstarPdf : public RooAbsPdf {
 public:
-  RooSillKstarPdf() {} // For serialization only
-  RooSillKstarPdf(const char *name, const char *title,
+  RooSillGeneralizedKstarPdf() {} // For serialization only
+  RooSillGeneralizedKstarPdf(const char *name, const char *title,
              RooAbsReal& _x,
              RooAbsReal& _mass,
              RooAbsReal& _gamma,
              RooAbsReal& _mass_daughter1,
              RooAbsReal& _mass_daughter2,
              RooAbsReal& _l);
-  RooSillKstarPdf(const RooSillKstarPdf& other, const char* name = nullptr);
-  virtual TObject* clone(const char* newname) const override { return new RooSillKstarPdf(*this, newname); }
-  inline virtual ~RooSillKstarPdf() {}
+  RooSillGeneralizedKstarPdf(const RooSillGeneralizedKstarPdf& other, const char* name = nullptr);
+  virtual TObject* clone(const char* newname) const override { return new RooSillGeneralizedKstarPdf(*this, newname); }
+  inline virtual ~RooSillGeneralizedKstarPdf() {}
 
 protected:
   RooRealProxy x;       // Observable (E)
@@ -29,7 +29,7 @@ protected:
   Double_t evaluate() const override;
 
 private:
-  ClassDefOverride(RooSillKstarPdf, 1)
+  ClassDefOverride(RooSillGeneralizedKstarPdf, 1)
 };
 
 ///////////////////////////// Class Implementation /////////////////////////////
@@ -38,9 +38,9 @@ private:
 #include <RooMath.h>
 #include <cmath>
 
-ClassImp(RooSillKstarPdf)
+ClassImp(RooSillGeneralizedKstarPdf)
 
-RooSillKstarPdf::RooSillKstarPdf(const char *name, const char *title,
+RooSillGeneralizedKstarPdf::RooSillGeneralizedKstarPdf(const char *name, const char *title,
                        RooAbsReal& _x,
                        RooAbsReal& _mass,
                        RooAbsReal& _gamma,
@@ -57,7 +57,7 @@ RooSillKstarPdf::RooSillKstarPdf(const char *name, const char *title,
 {
 }
 
-RooSillKstarPdf::RooSillKstarPdf(const RooSillKstarPdf& other, const char* name)
+RooSillGeneralizedKstarPdf::RooSillGeneralizedKstarPdf(const RooSillGeneralizedKstarPdf& other, const char* name)
   : RooAbsPdf(other, name),
     x("x", this, other.x),
     mass("mass", this, other.mass),
@@ -67,7 +67,7 @@ RooSillKstarPdf::RooSillKstarPdf(const RooSillKstarPdf& other, const char* name)
     l("l", this, other.l)
 {}
 
-double RooSillKstarPdf::evaluate() const {
+double RooSillGeneralizedKstarPdf::evaluate() const {
   
   double kstar = x;
   double E = std::sqrt(kstar * kstar + mass_daughter1 * mass_daughter1) + std::sqrt(kstar * kstar + mass_daughter2 * mass_daughter2);
