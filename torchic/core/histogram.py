@@ -190,7 +190,7 @@ def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: s
         name = hist_sel.GetName() + "_eff"
     if xtitle is None:
         xtitle = hist_sel.GetXaxis().GetTitle()
-    hist_eff = TH1F(name, f'{name}; f{xtitle} ; f{ytitle}', hist_tot.GetNbinsX(), hist_tot.GetXaxis().GetXmin(), hist_tot.GetXaxis().GetXmax())
+    hist_eff = TH1F(name, f'{name}; {xtitle} ; {ytitle}', hist_tot.GetNbinsX(), hist_tot.GetXaxis().GetXmin(), hist_tot.GetXaxis().GetXmax())
     for xbin in range(1, hist_tot.GetNbinsX()+1):
             if hist_tot.GetBinContent(xbin) > 0:
                 eff = hist_sel.GetBinContent(xbin)/hist_tot.GetBinContent(xbin)
