@@ -1,4 +1,6 @@
 
+from ROOT import gStyle, TLegend
+
 def set_root_object(object, **kwargs):
 
     if 'line_color' in kwargs:
@@ -35,3 +37,26 @@ def set_root_object(object, **kwargs):
         object.GetXaxis().SetTitleOffset(kwargs['x_title_offset'])
     if 'y_title_offset' in kwargs:
         object.GetYaxis().SetTitleOffset(kwargs['y_title_offset'])
+
+def set_alice_global_style():
+    gStyle.SetOptStat(0)
+    gStyle.SetPadTickX(1)
+    gStyle.SetPadTickY(1)
+
+def set_alice_frame_style(frame):
+    '''
+        The frame is a histogram or graph used to draw the axes on the canvas
+    '''
+    frame.GetYaxis().SetTitleSize(0.05)
+    frame.GetXaxis().SetTitleSize(0.05)
+    frame.GetYaxis().SetLabelSize(0.045)
+    frame.GetXaxis().SetLabelSize(0.045)
+
+def init_legend(xmin, ymin, xmax, ymax, **kwargs) -> TLegend:
+    legend = TLegend(xmin, ymin, xmax, ymax)
+    legend.SetBorderSize(kwargs.get('border_size', 0))
+    legend.SetFillStyle(kwargs.get('fill_style', 0))
+    legend.SetTextSize(kwargs.get('text_size', 0.04))
+    legend.SetTextFont(kwargs.get('text_font', 42))
+    legend.SetNColumns(kwargs.get('n_columns', 1))
+    return legend
