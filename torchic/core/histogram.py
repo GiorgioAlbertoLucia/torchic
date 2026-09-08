@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from ROOT import TH1F, TH2F, TFile, TGraphErrors
 import boost_histogram as bh
 from torchic.utils.overload import overload, signature
+from torchic.utils.terminal_colors import TerminalColors as tc
 
 import numpy as np
 
@@ -47,7 +48,8 @@ def build_TH1(data, axis_spec_x: AxisSpec, **kwargs) -> TH1F:
     arr_x = np.ascontiguousarray(data, dtype=np.float64)
     arr_w = np.ones(len(data), dtype=np.float64)
     
-    hist.FillN(len(arr_x), arr_x, arr_w)
+    if len(arr_x) > 0 and len(arr_w) > 0:
+        hist.FillN(len(arr_x), arr_x, arr_w)
     return hist
 
 def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kwargs) -> TH2F:
@@ -65,14 +67,15 @@ def build_TH2(data_x, data_y, axis_spec_x: AxisSpec, axis_spec_y: AxisSpec, **kw
     '''
 
     name = kwargs.get('name', axis_spec_x.name + '_' + axis_spec_y.name)
-    title = kwargs.get('title', axis_spec_x.title + ';' + axis_spec_y.title)
+    title = kwargs.get('title', ';' + axis_spec_x.title + ';' + axis_spec_y.title)
     hist = TH2F(name, title, axis_spec_x.nbins, axis_spec_x.xmin, axis_spec_x.xmax, axis_spec_y.nbins, axis_spec_y.xmin, axis_spec_y.xmax)
     
     arr_x = np.ascontiguousarray(data_x, dtype=np.float64)
     arr_y = np.ascontiguousarray(data_y, dtype=np.float64)
     arr_w = np.ones(len(data_x), dtype=np.float64)
     
-    hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
+    if len(arr_x) > 0 and len(arr_y) > 0 and len(arr_w) > 0:
+        hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
     return hist
 
 def fill_TH1(data, hist: TH1F):
@@ -86,8 +89,9 @@ def fill_TH1(data, hist: TH1F):
     
     arr_x = np.ascontiguousarray(data, dtype=np.float64)
     arr_w = np.ones(len(data), dtype=np.float64)
-    hist.FillN(len(arr_x), arr_x, arr_w)
-    
+    if len(arr_x) > 0 and len(arr_w) > 0:
+        hist.FillN(len(arr_x), arr_x, arr_w)
+
 def fill_TH2(data_x, data_y, hist: TH2F):
     '''
         Fill a 2D histogram with data
@@ -101,7 +105,8 @@ def fill_TH2(data_x, data_y, hist: TH2F):
     arr_y = np.ascontiguousarray(data_y, dtype=np.float64)
     arr_w = np.ones(len(data_x), dtype=np.float64)
     
-    hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
+    if len(arr_x) > 0 and len(arr_y) > 0 and len(arr_w) > 0:
+        hist.FillN(len(arr_x), arr_x, arr_y, arr_w)
 
 def build_boost1(data, axis_spec_x: AxisSpec) -> bh.Histogram:
     '''
@@ -151,6 +156,9 @@ def _(hist_load_info: HistLoadInfo):
 
     hist_file = TFile(hist_load_info.hist_file_path, 'READ')
     hist = hist_file.Get(hist_load_info.hist_name)
+    if 'TObject' in str(type(hist)):
+        print(tc.RED + '[ERROR]:' + tc.RESET + f'Histogram ' + tc.CYAN + f'{hist_load_info.hist_name}:{hist_load_info.hist_file_path}' + tc.RESET + ' not found')
+        return None
     hist.SetDirectory(0)
     hist_file.Close()
     return hist
@@ -169,6 +177,9 @@ def _(hist_file_path: str, hist_name: str) -> TH1F:
 
     hist_file = TFile(hist_file_path, 'READ')
     hist = hist_file.Get(hist_name)
+    if 'TObject' in str(type(hist)):
+        print(tc.RED + '[ERROR]:' + tc.RESET + f'Histogram' +tc.CYAN +f'{hist_name}:{hist_file_path}' + tc.RESET+ ' not found')
+        return None
     hist.SetDirectory(0)
     hist_file.Close()
     return hist
@@ -190,7 +201,9 @@ def build_efficiency(hist_tot: TH1F, hist_sel: TH1F, name: str = None, xtitle: s
         name = hist_sel.GetName() + "_eff"
     if xtitle is None:
         xtitle = hist_sel.GetXaxis().GetTitle()
-    hist_eff = TH1F(name, f'{name}; {xtitle} ; {ytitle}', hist_tot.GetNbinsX(), hist_tot.GetXaxis().GetXmin(), hist_tot.GetXaxis().GetXmax())
+    #hist_eff = TH1F(name, f'{name}; {xtitle} ; {ytitle}', hist_tot.GetNbinsX(), np.array(hist_tot.GetXaxis().GetXbins().GetArray()))
+    hist_eff = hist_sel.Clone(name)
+    hist_eff.SetTitle(f'{name}; {xtitle} ; {ytitle}')
     for xbin in range(1, hist_tot.GetNbinsX()+1):
             if hist_tot.GetBinContent(xbin) > 0:
                 eff = hist_sel.GetBinContent(xbin)/hist_tot.GetBinContent(xbin)
