@@ -19,6 +19,7 @@ __all__ = [
     'AxisSpec',
     'HistLoadInfo',
     'histogram',
-    'Plotter'
+    'graph',
+    'Plotter',
     'fit',
 ]
