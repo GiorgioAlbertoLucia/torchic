@@ -1,5 +1,7 @@
 import os
 
+_LOADED = False
+
 class RooPdf:
     @staticmethod
     def try_import_roopdf():
@@ -28,12 +30,22 @@ class RooPdf:
 
         return None, None, None, None, None
 
-RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp = RooPdf.try_import_roopdf()
+RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp = \
+    None, None, None, None, None
+    
+def load_fit_modules():
+    global RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp
+    global _LOADED
+    if _LOADED:
+        return
+    RooGausExp, RooSillPdf, RooSillGeneralizedPdf, RooSillGeneralizedKstarPdf, RooGausDExp = RooPdf.try_import_roopdf()
+    _LOADED = True
 
 __all__ = [
-    'RooGausExp',
-    'RooSillPdf',
-    'RooSillGeneralizedPdf',
-    'RooSillGeneralizedKstarPdf',
-    'RooGausDExp',
+    "RooGausExp",
+    "RooSillPdf",
+    "RooSillGeneralizedPdf",
+    "RooSillGeneralizedKstarPdf",
+    "RooGausDExp",
+    "load_fit_modules", 
 ]
