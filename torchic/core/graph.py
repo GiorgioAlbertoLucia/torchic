@@ -3,6 +3,7 @@ import pandas as pd
 from ROOT import TGraphErrors, TFile
 
 from torchic.core.histogram import HistLoadInfo
+from torchic.utils.terminal_colors import TerminalColors as tc
 
 @singledispatch
 def create_graph(arg, *args, **kwargs):
@@ -75,13 +76,16 @@ def _(graph_load_info: HistLoadInfo):
             graph_load_info (HistLoadInfo): The information needed to load the graph
 
         Returns:
-            TH1F: The graph
+            TGraphErrors: The graph
     '''
 
     graph_file = TFile(graph_load_info.graph_file_path, 'READ')
-    hist = graph_file.Get(graph_load_info.graph_name)
+    graph = graph_file.Get(graph_load_info.graph_name)
+    if 'TObject' in str(type(graph)):
+        print(tc.RED + '[ERROR]:' + tc.RESET + f'Graph '+tc.CYAN + f'{graph_load_info.graph_name}:{graph_load_info.graph_file_path}' + tc.RESET + ' not found')
+        return None
     graph_file.Close()
-    return hist
+    return graph
 
 @load_graph.register
 def _(graph_file_path: str, graph_name: str):
@@ -89,13 +93,17 @@ def _(graph_file_path: str, graph_name: str):
         Load a graph from a ROOT file
 
         Args:
-            graph_load_info (HistLoadInfo): The information needed to load the graph
+            graph_file_path (str): The path to the ROOT file
+            graph_name (str): The name of the graph to load
 
         Returns:
-            TH1F: The graph
+            TGraphErrors: The graph
     '''
 
     graph_file = TFile(graph_file_path, 'READ')
-    hist = graph_file.Get(graph_name)
+    graph = graph_file.Get(graph_name)
+    if 'TObject' in str(type(graph)):
+        print(tc.RED + '[ERROR]:' + tc.RESET + f'Graph ' + tc.CYAN + f'{graph_name}:{graph_file_path}' + tc.RESET + ' not found')
+        return None
     graph_file.Close()
-    return hist
+    return graph
