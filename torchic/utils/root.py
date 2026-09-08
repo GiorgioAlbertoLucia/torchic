@@ -60,3 +60,13 @@ def init_legend(xmin, ymin, xmax, ymax, **kwargs) -> TLegend:
     legend.SetTextFont(kwargs.get('text_font', 42))
     legend.SetNColumns(kwargs.get('n_columns', 1))
     return legend
+
+def silence_roofit(level_message=5):
+    '''
+    Silences RooFit messages below the specified level. Default is 5 (FATAL).
+    3 = WARNING, 4 = ERROR, 5 = FATAL
+    '''
+    
+    from ROOT import RooFit, RooMsgService
+    RooMsgService.instance().setGlobalKillBelow(level_message) # 3 = WARNING, 4 = ERROR, 5 = FATAL
+    RooFit.PrintLevel(-1)
