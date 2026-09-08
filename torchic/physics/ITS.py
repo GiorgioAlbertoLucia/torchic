@@ -25,10 +25,12 @@ def unpack_cluster_sizes(cluster_sizes, layer) -> list:
     '''
     return (cluster_sizes >> layer*4) & 0b1111
 
-def average_cluster_size(cluster_sizes: pd.Series, do_truncated: bool = False) -> tuple:
+def average_cluster_size(cluster_sizes: pd.Series, do_truncated: bool = False, do_turbo_geometry_correction: bool = False) -> tuple:
     '''
         Compute the average cluster size. A truncated mean will be used to avoid the presence of outliers.
     '''
+    
+    turbo_geometry_angle = np.deg2rad(17) # average angle of the ITS modules in the transverse plane
     
     np_cluster_sizes = cluster_sizes.to_numpy(dtype=np.uint64)
     avg_cluster_size = np.zeros(len(np_cluster_sizes))
@@ -36,6 +38,8 @@ def average_cluster_size(cluster_sizes: pd.Series, do_truncated: bool = False) -
     n_hits = np.zeros(len(np_cluster_sizes))
     for ilayer in range(N_ITS_LAYERS):
         cluster_size_layer = (np_cluster_sizes >> 4*ilayer) & 0b1111
+        if do_turbo_geometry_correction and ilayer < 3:
+            cluster_size_layer = cluster_size_layer * np.cos(turbo_geometry_angle)
         avg_cluster_size += cluster_size_layer
         n_hits += (cluster_size_layer > 0).astype(int)
         max_cluster_size = np.maximum(max_cluster_size, cluster_size_layer)
